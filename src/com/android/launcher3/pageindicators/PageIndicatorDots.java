@@ -27,6 +27,7 @@ import android.animation.ValueAnimator;
 import android.animation.ValueAnimator.AnimatorUpdateListener;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
@@ -171,6 +172,12 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
 
         mPaginationPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaginationPaint.setStyle(Style.FILL);
+        // Glow: frosted capsule behind the dots
+        mCapsuleFillPaint.setStyle(Style.FILL);
+        mCapsuleFillPaint.setColor(Color.argb(56, 255, 255, 255));
+        mCapsuleStrokePaint.setStyle(Style.STROKE);
+        mCapsuleStrokePaint.setColor(Color.argb(90, 255, 255, 255));
+        mCapsuleStrokePaint.setStrokeWidth(getResources().getDisplayMetrics().density);
         mPaginationPaint.setColor(ColorTokens.pageIndicatorDotColor.resolveColor(context));
         mDotRadius = getResources().getDimension(R.dimen.page_indicator_dot_size) / 2;
         mGapWidth = getResources().getDimension(R.dimen.page_indicator_gap_width);
@@ -485,6 +492,28 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
 
     @Override
     protected void onDraw(Canvas canvas) {
+        onDrawDots(canvas);
+    }
+
+    private final Paint mCapsuleFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mCapsuleStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF mCapsuleRect = new RectF();
+
+    /** Glow: draws a frosted glass capsule sized to the dots, centered at {@code centerY}. */
+    private void drawGlowCapsule(Canvas canvas, float centerY) {
+        float dotsWidth = Math.abs(mCircleGap) * (mNumPages - 1) + mDotRadius * 4;
+        float padH = mDotRadius * 4;
+        float padV = mDotRadius * 2.5f;
+        float halfWidth = dotsWidth / 2 + padH;
+        float halfHeight = mDotRadius + padV;
+        float centerX = getWidth() / 2f;
+        mCapsuleRect.set(centerX - halfWidth, centerY - halfHeight,
+                centerX + halfWidth, centerY + halfHeight);
+        canvas.drawRoundRect(mCapsuleRect, halfHeight, halfHeight, mCapsuleFillPaint);
+        canvas.drawRoundRect(mCapsuleRect, halfHeight, halfHeight, mCapsuleStrokePaint);
+    }
+
+    private void onDrawDots(Canvas canvas) {
         if (mNumPages < 2) {
             return;
         }
@@ -497,6 +526,8 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
         float circleGap = mCircleGap;
         float x = ((float) getWidth() / 2) - (mCircleGap * ((float) mNumPages - 1) / 2);
         float y = getHeight() / 2;
+
+        drawGlowCapsule(canvas, y);
 
         // Save the current alpha value, so we can reset to it again after drawing the dots
         int alpha = mPaginationPaint.getAlpha();
