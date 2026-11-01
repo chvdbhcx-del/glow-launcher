@@ -16,6 +16,7 @@
 
 package app.lawnchair
 
+import app.lawnchair.applock.GlowAppLock
 import android.animation.AnimatorSet
 import android.app.ActivityOptions
 import android.content.Context
@@ -283,7 +284,7 @@ class LawnchairLauncher : QuickstepLauncher() {
         super.getSupportedShortcuts(container),
         Stream.concat(
             Stream.of(LawnchairShortcut.UNINSTALL, LawnchairShortcut.CUSTOMIZE, LawnchairShortcut.OPEN_IN_STORE),
-            Stream.of(LawnchairShortcut.PAUSE_APPS),
+            Stream.of(LawnchairShortcut.PAUSE_APPS, GlowAppLock.LOCK, GlowAppLock.SHARE),
         ),
     )
 

@@ -27,4 +27,11 @@
     <string name="glow_wallpaper_both">Оба экрана</string>
     <string name="glow_wallpaper_applied">Обои установлены</string>
     <string name="glow_wallpaper_failed">Не удалось установить обои</string>
+    <string name="glow_app_lock">Заблокировать</string>
+    <string name="glow_app_unlock">Разблокировать</string>
+    <string name="glow_app_locked">Приложение заблокировано</string>
+    <string name="glow_app_unlocked">Приложение разблокировано</string>
+    <string name="glow_app_lock_needs_screen_lock">Чтобы блокировать приложения, включите блокировку экрана в настройках</string>
+    <string name="glow_app_lock_prompt">Открыть %1$s</string>
+    <string name="glow_app_share">Поделиться</string>
 </resources>

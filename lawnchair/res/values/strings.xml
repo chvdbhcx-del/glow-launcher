@@ -1104,4 +1104,11 @@
     <string name="glow_wallpaper_both">Home and lock screens</string>
     <string name="glow_wallpaper_applied">Wallpaper set</string>
     <string name="glow_wallpaper_failed">Couldn\'t set wallpaper</string>
+    <string name="glow_app_lock">Lock app</string>
+    <string name="glow_app_unlock">Unlock app</string>
+    <string name="glow_app_locked">App locked</string>
+    <string name="glow_app_unlocked">App unlocked</string>
+    <string name="glow_app_lock_needs_screen_lock">Set a screen lock in system settings to lock apps</string>
+    <string name="glow_app_lock_prompt">Open %1$s</string>
+    <string name="glow_app_share">Share</string>
 </resources>

@@ -466,6 +466,11 @@ public interface ActivityContext extends SavedStateRegistryOwner {
             return null;
         }
 
+        // Glow: locked apps ask for biometrics / screen lock first
+        if (app.lawnchair.applock.GlowAppLock.interceptLaunch(context, intent, item)) {
+            return null;
+        }
+
         boolean isShortcut = (item instanceof WorkspaceItemInfo)
                 && item.itemType == LauncherSettings.Favorites.ITEM_TYPE_DEEP_SHORTCUT
                 && !((WorkspaceItemInfo) item).isPromise();
