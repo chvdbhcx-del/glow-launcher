@@ -33,8 +33,8 @@ import androidx.annotation.StringRes
 import app.lawnchair.preferences2.PreferenceManager2
 import app.lawnchair.preferences2.firstCached
 import app.lawnchair.ui.preferences.PreferenceActivity
-import app.lawnchair.ui.preferences.navigation.General
 import app.lawnchair.ui.preferences.navigation.Root
+import app.lawnchair.ui.wallpaper.GlowThemesActivity
 import app.lawnchair.ui.wallpaper.GlowWallpaperActivity
 import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherState
@@ -70,7 +70,7 @@ class GlowEditOverlay @JvmOverloads constructor(
             launcher.startActivity(Intent(launcher, GlowWallpaperActivity::class.java))
         })
         bar.addView(createButton(R.drawable.ic_palette, R.string.glow_themes) {
-            launcher.startActivity(PreferenceActivity.createIntent(launcher, General))
+            launcher.startActivity(Intent(launcher, GlowThemesActivity::class.java))
         })
         bar.addView(createButton(R.drawable.ic_widget, R.string.widget_button_text) {
             launcher.openWidgetPicker()

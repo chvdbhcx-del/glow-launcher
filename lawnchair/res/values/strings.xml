@@ -1111,4 +1111,11 @@
     <string name="glow_app_lock_needs_screen_lock">Set a screen lock in system settings to lock apps</string>
     <string name="glow_app_lock_prompt">Open %1$s</string>
     <string name="glow_app_share">Share</string>
+    <string name="glow_theme_apply">Apply</string>
+    <string name="glow_theme_applied">Theme applied</string>
+    <string name="glow_theme_more_settings">Icons, shapes and colors</string>
+    <string name="glow_theme_violet">Violet glow</string>
+    <string name="glow_theme_rose">Rose silk</string>
+    <string name="glow_theme_frost">Frost</string>
+    <string name="glow_theme_peach">Peach</string>
 </resources>

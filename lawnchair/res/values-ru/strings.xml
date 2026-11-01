@@ -34,4 +34,11 @@
     <string name="glow_app_lock_needs_screen_lock">Чтобы блокировать приложения, включите блокировку экрана в настройках</string>
     <string name="glow_app_lock_prompt">Открыть %1$s</string>
     <string name="glow_app_share">Поделиться</string>
+    <string name="glow_theme_apply">Применить</string>
+    <string name="glow_theme_applied">Тема применена</string>
+    <string name="glow_theme_more_settings">Иконки, формы и цвета</string>
+    <string name="glow_theme_violet">Фиолетовое сияние</string>
+    <string name="glow_theme_rose">Розовый шёлк</string>
+    <string name="glow_theme_frost">Иней</string>
+    <string name="glow_theme_peach">Персик</string>
 </resources>

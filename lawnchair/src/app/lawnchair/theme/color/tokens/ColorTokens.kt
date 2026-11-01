@@ -145,17 +145,20 @@ object ColorTokens {
 
     @JvmField val FolderPreviewColor = DayNightColorToken(Accent2_200, Neutral1_900.setLStar(12.0))
 
+    // Glow: app menus are translucent "glass"
+    private const val GLOW_POPUP_ALPHA = 0.84f
+
     @JvmField val PopupColorPrimary = DayNightColorToken(Accent2_50, Neutral2_800)
 
     @JvmField val PopupColorSecondary = DayNightColorToken(Neutral2_100, Neutral1_900)
 
     @JvmField val PopupColorTertiary = DayNightColorToken(Neutral2_300, Neutral2_700)
 
-    @JvmField val PopupShadeFirst = DayNightColorToken(PopupColorPrimary.setLStar(98.0), PopupColorPrimary.setLStar(20.0))
+    @JvmField val PopupShadeFirst = DayNightColorToken(PopupColorPrimary.setLStar(98.0).setAlpha(GLOW_POPUP_ALPHA), PopupColorPrimary.setLStar(20.0).setAlpha(GLOW_POPUP_ALPHA))
 
-    @JvmField val PopupShadeSecond = DayNightColorToken(PopupColorPrimary.setLStar(95.0), PopupColorPrimary.setLStar(15.0))
+    @JvmField val PopupShadeSecond = DayNightColorToken(PopupColorPrimary.setLStar(95.0).setAlpha(GLOW_POPUP_ALPHA), PopupColorPrimary.setLStar(15.0).setAlpha(GLOW_POPUP_ALPHA))
 
-    @JvmField val PopupShadeThird = DayNightColorToken(PopupColorPrimary.setLStar(90.0), PopupColorPrimary.setLStar(10.0))
+    @JvmField val PopupShadeThird = DayNightColorToken(PopupColorPrimary.setLStar(90.0).setAlpha(GLOW_POPUP_ALPHA), PopupColorPrimary.setLStar(10.0).setAlpha(GLOW_POPUP_ALPHA))
 
     @JvmField val PopupArrow = PopupShadeFirst
 

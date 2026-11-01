@@ -127,6 +127,12 @@
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
         <activity
+            android:name="app.lawnchair.ui.wallpaper.GlowThemesActivity"
+            android:exported="false"
+            android:label="@string/glow_themes"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
+        <activity
             android:name="app.lawnchair.applock.GlowAppLockActivity"
             android:exported="false"
             android:excludeFromRecents="true"
