@@ -27,6 +27,7 @@ import android.hardware.biometrics.BiometricPrompt
 import android.os.Build
 import android.os.Bundle
 import android.os.CancellationSignal
+import android.os.Parcelable
 import android.os.Process
 import android.os.UserHandle
 import android.widget.Toast
@@ -168,8 +169,8 @@ class GlowAppLockActivity : Activity() {
 
         fun createIntent(context: Context, target: Intent, user: UserHandle?, packageName: String): Intent =
             Intent(context, GlowAppLockActivity::class.java)
-                .putExtra(EXTRA_TARGET, Intent(target).setSourceBounds(null))
-                .putExtra(EXTRA_USER, user)
+                .putExtra(EXTRA_TARGET, Intent(target).apply { sourceBounds = null } as Parcelable)
+                .putExtra(EXTRA_USER, user as Parcelable?)
                 .putExtra(EXTRA_PACKAGE, packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
     }
