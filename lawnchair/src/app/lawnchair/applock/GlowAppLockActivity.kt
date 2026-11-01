@@ -42,7 +42,7 @@ class GlowAppLockActivity : Activity() {
     private var cancellation: CancellationSignal? = null
 
     private val target: Intent? by lazy { intentExtra(EXTRA_TARGET) }
-    private val user: UserHandle? by lazy { parcelableExtra(EXTRA_USER) }
+    private val lockedUser: UserHandle? by lazy { parcelableExtra(EXTRA_USER) }
     private val packageNameToOpen: String? by lazy { intent.getStringExtra(EXTRA_PACKAGE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -123,9 +123,9 @@ class GlowAppLockActivity : Activity() {
 
     private fun onAuthenticated() {
         val launch = target ?: return finish()
-        GlowAppLock.markUnlocked(this, packageNameToOpen!!, user)
+        GlowAppLock.markUnlocked(this, packageNameToOpen!!, lockedUser)
         try {
-            val targetUser = user
+            val targetUser = lockedUser
             if (targetUser == null || targetUser == Process.myUserHandle()) {
                 startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             } else {
