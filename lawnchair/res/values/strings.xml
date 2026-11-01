@@ -1094,4 +1094,7 @@
     <string name="lawnchair_action_failed">Failed to trigger action</string>
 
     <string name="please_wait">Please wait…</string>
+    <!-- Glow -->
+    <string name="glow_themes">Themes</string>
+    <string name="glow_exit_edit_mode">Exit edit mode</string>
 </resources>

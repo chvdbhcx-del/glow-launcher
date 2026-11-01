@@ -70,6 +70,12 @@
             android:paddingBottom="12dp"
             android:visibility="gone" />
 
+        <!-- Glow: edit mode toolbar (Wallpaper / Themes / Widgets / Settings) -->
+        <app.lawnchair.views.GlowEditOverlay
+            android:id="@+id/glow_edit_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
         <include
             android:id="@+id/drop_target_bar"
             layout="@layout/drop_target_bar" />

@@ -115,6 +115,9 @@ class EditModeState(id: Int) : LauncherState(id, StatsLogManager.LAUNCHER_STATE_
         return ScaleAndTranslation(1f, 0f, -offset)
     }
 
+    // Glow: the dock is replaced by the edit toolbar (GlowEditOverlay) in this state
+    override fun getVisibleElements(launcher: Launcher): Int = WORKSPACE_PAGE_INDICATOR
+
     override fun getWorkspaceBackgroundAlpha(launcher: Launcher): Float {
         return 0.2f
     }

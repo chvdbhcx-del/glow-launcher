@@ -25,6 +25,7 @@ import static android.view.MotionEvent.ACTION_UP;
 
 import static com.android.launcher3.LauncherState.ALL_APPS;
 import static com.android.launcher3.LauncherState.NORMAL;
+import static com.android.launcher3.LauncherState.EDIT_MODE;
 import static com.android.launcher3.Utilities.shouldEnableMouseInteractionChanges;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_ALLAPPS_CLOSE_TAP_OUTSIDE;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_SPLIT_SELECTION_EXIT_INTERRUPTED;
@@ -55,6 +56,7 @@ import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.util.TouchUtil;
 
 import app.lawnchair.LawnchairLauncher;
+import app.lawnchair.views.GlowEditOverlay;
 
 /**
  * Helper class to handle touch on empty space in workspace and show options popup on long press
@@ -247,7 +249,11 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
                 mWorkspace.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS,
                         HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
                 mLauncher.getStatsLogManager().logger().log(LAUNCHER_WORKSPACE_LONGPRESS);
-                mLauncher.showDefaultOptions(mTouchDownPoint.x, mTouchDownPoint.y);
+                if (GlowEditOverlay.shouldEnterEditModeOnLongPress(mLauncher)) {
+                    mLauncher.getStateManager().goToState(EDIT_MODE);
+                } else {
+                    mLauncher.showDefaultOptions(mTouchDownPoint.x, mTouchDownPoint.y);
+                }
                 if (mLauncher.isSplitSelectionActive()) {
                     mLauncher.dismissSplitSelection(LAUNCHER_SPLIT_SELECTION_EXIT_INTERRUPTED);
                 }
