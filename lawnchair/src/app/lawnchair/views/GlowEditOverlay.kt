@@ -17,6 +17,7 @@
 package app.lawnchair.views
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
@@ -34,11 +35,11 @@ import app.lawnchair.preferences2.firstCached
 import app.lawnchair.ui.preferences.PreferenceActivity
 import app.lawnchair.ui.preferences.navigation.General
 import app.lawnchair.ui.preferences.navigation.Root
+import app.lawnchair.ui.wallpaper.GlowWallpaperActivity
 import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherState
 import com.android.launcher3.R
 import com.android.launcher3.statemanager.StateManager
-import com.android.launcher3.views.OptionsPopupView
 
 /**
  * Glow edit mode overlay: a close button in the top corner and a bottom bar of
@@ -66,7 +67,7 @@ class GlowEditOverlay @JvmOverloads constructor(
             gravity = Gravity.CENTER
         }
         bar.addView(createButton(R.drawable.ic_wallpaper, R.string.wallpapers) {
-            OptionsPopupView.startWallpaperPicker(it)
+            launcher.startActivity(Intent(launcher, GlowWallpaperActivity::class.java))
         })
         bar.addView(createButton(R.drawable.ic_palette, R.string.glow_themes) {
             launcher.startActivity(PreferenceActivity.createIntent(launcher, General))

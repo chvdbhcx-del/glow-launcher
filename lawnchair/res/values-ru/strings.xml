@@ -20,4 +20,11 @@
     <!-- Glow -->
     <string name="glow_themes">Темы</string>
     <string name="glow_exit_edit_mode">Выйти из режима редактирования</string>
+    <string name="glow_more_wallpapers">Другие обои</string>
+    <string name="glow_wallpaper_apply">Установить обои</string>
+    <string name="glow_wallpaper_home">Главный экран</string>
+    <string name="glow_wallpaper_lock">Экран блокировки</string>
+    <string name="glow_wallpaper_both">Оба экрана</string>
+    <string name="glow_wallpaper_applied">Обои установлены</string>
+    <string name="glow_wallpaper_failed">Не удалось установить обои</string>
 </resources>

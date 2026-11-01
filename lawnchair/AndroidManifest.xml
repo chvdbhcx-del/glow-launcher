@@ -121,6 +121,12 @@
         </activity>
 
         <activity
+            android:name="app.lawnchair.ui.wallpaper.GlowWallpaperActivity"
+            android:exported="false"
+            android:label="@string/wallpapers"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
+        <activity
             android:name="app.lawnchair.BlankActivity"
             android:theme="@style/Theme.Transparent" />
 

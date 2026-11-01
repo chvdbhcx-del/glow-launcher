@@ -1097,4 +1097,11 @@
     <!-- Glow -->
     <string name="glow_themes">Themes</string>
     <string name="glow_exit_edit_mode">Exit edit mode</string>
+    <string name="glow_more_wallpapers">More wallpapers</string>
+    <string name="glow_wallpaper_apply">Set wallpaper</string>
+    <string name="glow_wallpaper_home">Home screen</string>
+    <string name="glow_wallpaper_lock">Lock screen</string>
+    <string name="glow_wallpaper_both">Home and lock screens</string>
+    <string name="glow_wallpaper_applied">Wallpaper set</string>
+    <string name="glow_wallpaper_failed">Couldn\'t set wallpaper</string>
 </resources>
