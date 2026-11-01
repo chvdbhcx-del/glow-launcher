@@ -65,10 +65,10 @@
     <string name="config_default_qsb_search_provider_id" translatable="false">google</string>
 
     <!-- Which icon shape for application to use by default -->
-    <string name="config_default_icon_shape" translatable="false">system</string>
+    <string name="config_default_icon_shape" translatable="false">squircle</string>
 
     <!-- Which icon shape for folder to use by default -->
-    <string name="config_default_folder_shape" translatable="false">system</string>
+    <string name="config_default_folder_shape" translatable="false">squircle</string>
 
     <!-- Which calendar to use on smartspace by default -->
     <string name="config_default_smart_space_calendar" translatable="false">gregorian</string>
@@ -82,7 +82,7 @@
     <string name="config_default_folder_color" translatable="false">default</string>
 
     <!-- which hotseat bg color to use by default -->
-    <string name="config_default_hotseat_bg_color" translatable="false">default</string>
+    <string name="config_default_hotseat_bg_color" translatable="false">custom|#ffffffff</string>
 
     <!-- which app drawer bg color to use by default -->
     <string name="config_default_app_drawer_bg_color" translatable="false">default</string>
@@ -163,8 +163,8 @@
     <bool name="config_default_enable_folder_icon_shape_customization">false</bool>
 
     <item name="config_default_home_icon_size_factor" type="dimen" format="float">1.0</item>
-    <item name="config_default_folder_preview_background_opacity" type="dimen" format="float">1.0</item>
-    <item name="config_default_folder_background_opacity" type="dimen" format="float">1.0</item>
+    <item name="config_default_folder_preview_background_opacity" type="dimen" format="float">0.45</item>
+    <item name="config_default_folder_background_opacity" type="dimen" format="float">0.8</item>
     <item name="config_default_drawer_icon_size_factor" type="dimen" format="float">1.0</item>
     <item name="config_default_home_icon_label_size_factor" type="dimen" format="float">1.0</item>
     <item name="config_default_home_icon_label_folder_size_factor" type="dimen" format="float">1.0</item>

@@ -222,6 +222,10 @@ public class Hotseat extends FrameLayout implements Insettable {
         GradientDrawable background = new GradientDrawable();
         background.setColor(finalColor);
         background.setCornerRadius(cornerRadius);
+        // Glow: thin light rim so the translucent dock reads as frosted glass
+        int strokeWidth = Math.max(1, Math.round(TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, 1f, getResources().getDisplayMetrics())));
+        background.setStroke(strokeWidth, Color.argb(Math.min(255, alphaValue + 60), 255, 255, 255));
         InsetDrawable bg = new InsetDrawable(background,
                 insetHorizontalLeft, insetVerticalTop, insetHorizontalRight, insetVerticalBottom);
         setBackground(bg);
