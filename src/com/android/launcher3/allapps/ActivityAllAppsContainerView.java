@@ -760,6 +760,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             scrollerLayoutParams.bottomMargin = mSearchContainer.getHeight()
                     + getResources().getDimensionPixelSize(
                             R.dimen.fastscroll_bottom_margin_floating_search);
+        } else if (isSearchBarAtBottom()
+                && mFastScroller.getLayoutParams() instanceof RelativeLayout.LayoutParams lp) {
+            // Glow: keep the fast scroller above the bottom search pill
+            lp.bottomMargin = getBottomSearchBarSpace();
         }
 
         mAllAppsStore.registerIconContainer(mAH.get(AdapterHolder.MAIN).mRecyclerView);
@@ -830,7 +834,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
         removeCustomRules(rvContainer);
         removeCustomRules(getSearchRecyclerView());
-        if (isAppDrawerSearchBarHidden()) {
+        if (isAppDrawerSearchBarHidden() || isSearchBarAtBottom()) {
             layoutWithoutSearchContainer(rvContainer, showTabs);
             layoutWithoutSearchContainer(getSearchRecyclerView(), /* tabs= */ false);
         } else if (isSearchBarFloating()) {
@@ -870,6 +874,12 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
         removeCustomRules(mHeader);
         if (hideSearchBar) {
+            layoutWithoutSearchContainer(mHeader, false /* includeTabsMargin */);
+        } else if (isSearchBarAtBottom()) {
+            // Glow: the search pill lives at the bottom, so the header starts at the top
+            if (mHeader.getLayoutParams() instanceof RelativeLayout.LayoutParams headerLp) {
+                headerLp.removeRule(RelativeLayout.BELOW);
+            }
             layoutWithoutSearchContainer(mHeader, false /* includeTabsMargin */);
         } else if (isSearchBarFloating()) {
             alignParentTop(mHeader, false /* includeTabsMargin */);
@@ -1063,6 +1073,22 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     public int getFloatingSearchBarRestingMarginEnd() {
         DeviceProfile dp = mActivityContext.getDeviceProfile();
         return dp.allAppsLeftRightMargin + dp.getAllAppsIconStartMargin(mActivityContext);
+    }
+
+    /**
+     * Glow: on phones the drawer search pill sits at the bottom of the drawer (iOS / Luminate
+     * style) instead of the top.
+     */
+    public boolean isSearchBarAtBottom() {
+        DeviceProfile dp = mActivityContext.getDeviceProfile();
+        return !isAppDrawerSearchBarHidden() && !isSearchBarFloating()
+                && !dp.shouldShowAllAppsOnSheet() && !dp.isVerticalBarLayout();
+    }
+
+    /** Glow: space the bottom search pill takes above the navigation bar. */
+    public int getBottomSearchBarSpace() {
+        return getResources().getDimensionPixelSize(R.dimen.search_box_container_height)
+                + Math.round(8 * getResources().getDisplayMetrics().density);
     }
 
     private boolean isAppDrawerSearchBarHidden() {
@@ -1885,6 +1911,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 }
                 if (isSearchBarFloating()) {
                     bottomOffset += mSearchContainer.getHeight();
+                } else if (isSearchBarAtBottom()) {
+                    bottomOffset += getBottomSearchBarSpace();
                 }
                 mRecyclerView.setPadding(mPadding.left, mPadding.top, mPadding.right,
                         mPadding.bottom + bottomOffset);

@@ -19,6 +19,7 @@ import android.view.ViewTreeObserver
 import android.view.ViewTreeObserver.OnGlobalFocusChangeListener
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
+import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.runtime.DisposableEffect
@@ -30,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -184,14 +186,20 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
                     showLens = lensIntent != null,
                 )
 
-                val backgroundColor = if (supportBlur) {
-                    ColorTokens.SearchboxHighlightBlur.resolveColor(context)
-                } else {
-                    ColorTokens.SearchboxHighlight.resolveColor(context)
+                // Glow: at the bottom the bar is a frosted white pill that stays visible while typing
+                val atBottom = isAtBottom()
+                val backgroundColor = when {
+                    atBottom -> Color.WHITE
+                    supportBlur -> ColorTokens.SearchboxHighlightBlur.resolveColor(context)
+                    else -> ColorTokens.SearchboxHighlight.resolveColor(context)
                 }
 
                 val backgroundAlpha by animateIntAsState(
-                    if (isFocused || !queryEmpty) 0 else 100,
+                    when {
+                        atBottom -> if (isFocused || !queryEmpty) 34 else 24
+                        isFocused || !queryEmpty -> 0
+                        else -> 100
+                    },
                 )
 
                 // Ignore other theme attributes to preserve existing behavior
@@ -201,8 +209,8 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
                     backgroundColor = backgroundColor,
                     backgroundAlpha = backgroundAlpha,
                     cornerRadius = 1f,
-                    strokeColor = null,
-                    strokeWidth = 0f,
+                    strokeColor = if (atBottom) Color.argb(110, 255, 255, 255) else null,
+                    strokeWidth = if (atBottom) resources.displayMetrics.density else 0f,
                 )
 
                 val actions = QsbActions(
@@ -426,6 +434,7 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        viewTreeObserver.addOnPreDrawListener(imeTracker)
         launcher.deviceProfile.inv.addOnChangeListener(this)
         launcher.addOnDeviceProfileChangeListener(this)
         if (::appsView.isInitialized) {
@@ -436,6 +445,7 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
+        viewTreeObserver.removeOnPreDrawListener(imeTracker)
         launcher.deviceProfile.inv.removeOnChangeListener(this)
         launcher.removeOnDeviceProfileChangeListener(this)
         if (::appsView.isInitialized) {
@@ -513,7 +523,36 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
         appsView.mSearchRecyclerView.onSearchResultsChanged()
     }
 
+    private fun isAtBottom(): Boolean = ::appsView.isInitialized && appsView.isSearchBarAtBottom
+
+    // Glow: lift the bottom search pill above the keyboard (the launcher window uses adjustNothing)
+    private val imeTracker = ViewTreeObserver.OnPreDrawListener {
+        if (isAtBottom()) {
+            val insets = ViewCompat.getRootWindowInsets(this)
+            val ime = insets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom ?: 0
+            val nav = insets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
+            val target = -max(0, ime - nav).toFloat()
+            if (translationY != target) translationY = target
+        } else if (translationY != 0f) {
+            translationY = 0f
+        }
+        true
+    }
+
     override fun setInsets(insets: Rect) {
+        val lp = layoutParams
+        if (isAtBottom() && lp is RelativeLayout.LayoutParams) {
+            lp.removeRule(RelativeLayout.ALIGN_PARENT_TOP)
+            lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+            lp.topMargin = 0
+            lp.bottomMargin = insets.bottom + (8 * resources.displayMetrics.density).toInt()
+            requestLayout()
+            return
+        }
+        if (lp is RelativeLayout.LayoutParams) {
+            lp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+            lp.bottomMargin = 0
+        }
         (layoutParams as MarginLayoutParams).apply {
             topMargin = when {
                 hideSearchBar -> 0
@@ -532,6 +571,7 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
     override fun getEditText() = input
 
     override fun setBackgroundVisibility(visible: Boolean, maxAlpha: Float) {
+        if (isAtBottom()) return
         if (bgVisible != visible) {
             bgVisible = visible
             bgAlpha = maxAlpha
