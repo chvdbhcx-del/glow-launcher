@@ -36,7 +36,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE" ]; then
-            echo "::error::Signing secrets are missing. Add KEYSTORE, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD in the repository settings."
+            if [[ "$RELEASE_TAG" == *-test* ]]; then
+              echo "::warning::No signing secrets: building a test release signed with the debug key."
+              echo "TEST_RELEASE=true" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            echo "::error::Signing secrets are missing. Add KEYSTORE, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD in the repository settings, or use a tag containing -test."
             exit 1
           fi
           echo "$KEYSTORE" | base64 --decode > "$GITHUB_WORKSPACE/key.jks"
@@ -63,7 +68,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release view "$RELEASE_TAG" >/dev/null 2>&1 && gh release delete "$RELEASE_TAG" -y
+          if [ "$TEST_RELEASE" = "true" ]; then
+            extra="--prerelease"
+            notes="Test build of Glow Launcher (minified release variant, signed with a test key). Install on Android 8.0 or newer. The final release uses a different key, so uninstall this build before installing it."
+          else
+            extra=""
+            notes="Signed release build of Glow Launcher. Download the APK below and install it on Android 8.0 or newer."
+          fi
           gh release create "$RELEASE_TAG" "Glow-Launcher-${RELEASE_TAG}.apk" \
             --title "Glow Launcher ${RELEASE_TAG#v}" \
             --target "$GITHUB_SHA" \
-            --notes "Signed release build of Glow Launcher. Download the APK below and install it on Android 8.0 or newer."
+            --notes "$notes" $extra
