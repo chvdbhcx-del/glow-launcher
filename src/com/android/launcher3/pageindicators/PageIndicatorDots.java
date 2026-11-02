@@ -509,6 +509,10 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
         float centerX = getWidth() / 2f;
         mCapsuleRect.set(centerX - halfWidth, centerY - halfHeight,
                 centerX + halfWidth, centerY + halfHeight);
+        // Fade the capsule together with the dots (auto-hide on the home screen)
+        float fade = mPaginationPaint.getAlpha() / 255f;
+        mCapsuleFillPaint.setAlpha(Math.round(56 * fade));
+        mCapsuleStrokePaint.setAlpha(Math.round(90 * fade));
         canvas.drawRoundRect(mCapsuleRect, halfHeight, halfHeight, mCapsuleFillPaint);
         canvas.drawRoundRect(mCapsuleRect, halfHeight, halfHeight, mCapsuleStrokePaint);
     }

@@ -39,8 +39,14 @@ jobs:
         run: |
           if [ -z "$KEYSTORE" ]; then
             if [[ "$RELEASE_TAG" == *-test* ]]; then
-              echo "::warning::No signing secrets: building a test release signed with the debug key."
+              echo "::warning::No signing secrets: signing the test release with the public test key."
               echo "TEST_RELEASE=true" >> "$GITHUB_ENV"
+              {
+                echo "storeFile=$GITHUB_WORKSPACE/.github/test-signing/glow-test.jks"
+                echo "storePassword=glowtest"
+                echo "keyAlias=glowtest"
+                echo "keyPassword=glowtest"
+              } > keystore.properties
               exit 0
             fi
             echo "::error::Signing secrets are missing. Add KEYSTORE, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD in the repository settings, or use a tag containing -test."

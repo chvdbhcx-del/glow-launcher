@@ -419,6 +419,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             lp.leftMargin = lp.rightMargin = 0;
             lp.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
             lp.bottomMargin = grid.hotseatBarSizePx - grid.workspaceCellPaddingXPx;
+            // Glow: keep the page dots clear of the search pill that now sits on top of the dock
+            lp.bottomMargin += Math.round(10 * getResources().getDisplayMetrics().density);
         }
         mPageIndicator.setLayoutParams(lp);
     }
