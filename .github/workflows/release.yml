@@ -5,6 +5,8 @@ name: Release APK
 on:
   push:
     tags: [ 'v*' ]
+    # Pushing to a claude/release-* branch publishes a test pre-release
+    branches: [ 'claude/release-*' ]
   workflow_dispatch:
     inputs:
       tag:
@@ -18,7 +20,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      RELEASE_TAG: ${{ github.event.inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || format('v1.0.0-test{0}', github.run_number) }}
     steps:
       - uses: actions/checkout@v7
         with:
