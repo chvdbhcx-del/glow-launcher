@@ -65,10 +65,10 @@
     <string name="config_default_qsb_search_provider_id" translatable="false">google</string>
 
     <!-- Which icon shape for application to use by default -->
-    <string name="config_default_icon_shape" translatable="false">squircle</string>
+    <string name="config_default_icon_shape" translatable="false">cupertino</string>
 
     <!-- Which icon shape for folder to use by default -->
-    <string name="config_default_folder_shape" translatable="false">squircle</string>
+    <string name="config_default_folder_shape" translatable="false">cupertino</string>
 
     <!-- Which calendar to use on smartspace by default -->
     <string name="config_default_smart_space_calendar" translatable="false">gregorian</string>
@@ -119,7 +119,7 @@
     <bool name="config_default_always_reload_icons">true</bool>
     <bool name="config_default_dark_status_bar">false</bool>
     <bool name="config_default_show_notification_count">false</bool>
-    <bool name="config_default_themed_hotseat_qsb">true</bool>
+    <bool name="config_default_themed_hotseat_qsb">false</bool>
     <bool name="config_default_dock_search_bar_force_website">false</bool>
     <bool name="config_default_rounded_widgets">true</bool>
     <bool name="config_default_allow_widget_overlap">false</bool>
@@ -147,7 +147,7 @@
     <bool name="config_default_show_icon_labels_on_home_screen">true</bool>
     <bool name="config_default_show_icon_labels_in_drawer">true</bool>
     <bool name="config_default_enable_fuzzy_search">false</bool>
-    <bool name="config_default_enable_smartspace">true</bool>
+    <bool name="config_default_enable_smartspace">false</bool>
     <bool name="config_default_enable_feed">false</bool>
     <bool name="config_default_enable_icon_selection">false</bool>
     <bool name="config_default_show_component_names">false</bool>

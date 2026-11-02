@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -45,6 +46,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.lawnchair.qsb.providers.Google
 import app.lawnchair.qsb.providers.GoogleGo
 import app.lawnchair.qsb.providers.PixelSearch
@@ -335,6 +337,7 @@ fun LawnQsbUi(
     style: QsbStyle,
     actions: QsbActions,
     modifier: Modifier = Modifier,
+    hint: String? = null,
 ) {
     val density = LocalDensity.current
 
@@ -393,7 +396,18 @@ fun LawnQsbUi(
             )
         }
 
-        Spacer(Modifier.weight(1f))
+        if (hint != null) {
+            // Glow: "Search" label next to the provider icon, like the iOS-style search pill
+            Text(
+                text = hint,
+                color = ComposeColor.White.copy(alpha = 0.9f),
+                fontSize = 16.sp,
+                maxLines = 1,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
 
         val visibleIcons = state.endIcons.filter { it.visible }
         AnimatedContent(

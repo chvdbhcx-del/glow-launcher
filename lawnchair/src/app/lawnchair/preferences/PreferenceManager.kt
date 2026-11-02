@@ -113,7 +113,7 @@ class PreferenceManager @Inject constructor(
     val workspaceIncreaseMaxGridSize = BoolPref("pref_workspace_increase_max_grid_size", false)
     val folderRows = IdpIntPref("pref_folderRows", { numFolderRows[INDEX_DEFAULT] }, reloadGrid)
 
-    val drawerOpacity = FloatPref("pref_drawerOpacity", .5f, recreate)
+    val drawerOpacity = FloatPref("pref_drawerOpacity", .3f, recreate)
     val coloredBackgroundLightness = FloatPref("pref_coloredBackgroundLightness", 1F)
     val feedProvider = StringPref("pref_feedProvider", "")
     val ignoreFeedWhitelist = BoolPref("pref_ignoreFeedWhitelist", false)
@@ -167,7 +167,7 @@ class PreferenceManager @Inject constructor(
     val drawerThemedIcons = BoolPref("drawer_themed_icons", false, reloadIcons)
 
     val hotseatQsbCornerRadius = FloatPref("pref_hotseatQsbCornerRadius", 1F, recreate)
-    val hotseatQsbAlpha = IntPref("pref_searchHotseatTranparency", 45, recreate)
+    val hotseatQsbAlpha = IntPref("pref_searchHotseatTranparency", 26, recreate)
     val hotseatQsbStrokeWidth = FloatPref("pref_searchStrokeWidth", 0F, recreate)
     val hotseatBG = BoolPref("pref_hotseatBG", true, recreate)
     val hotseatBGHorizontalInsetLeft = IntPref("pref_hotseatBGHRinsetLeft", 30, recreate)
@@ -175,7 +175,7 @@ class PreferenceManager @Inject constructor(
     val hotseatBGHorizontalInsetRight = IntPref("pref_hotseatBGHRinsetRight", 30, recreate)
     val hotseatBGVerticalInsetBottom = IntPref("pref_hotseatBGVRinsetBottom", 10, recreate)
 
-    val hotseatBGAlpha = IntPref("pref_hotseatBGTransparency", 30, recreate)
+    val hotseatBGAlpha = IntPref("pref_hotseatBGTransparency", 26, recreate)
 
     val enableWallpaperBlur = BoolPref("pref_enableWallpaperBlur", false, recreate)
     val wallpaperBlur = IntPref("pref_wallpaperBlur", 25, recreate)

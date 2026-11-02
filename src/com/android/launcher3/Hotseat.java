@@ -27,10 +27,10 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.InsetDrawable;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -120,6 +120,11 @@ public class Hotseat extends FrameLayout implements Insettable {
     PreferenceManager2 preferenceManager2;
     PreferenceManager preferenceManager;
 
+    // Glow: dock plate around the icons only; the search bar sits above it
+    @Nullable private GradientDrawable mDockPlate;
+    private float mPlateCenterY;
+    private float mPlateHalfHeight;
+
     public Hotseat(Context context) {
         this(context, null);
     }
@@ -149,7 +154,18 @@ public class Hotseat extends FrameLayout implements Insettable {
         }
         int layoutId = hotseatMode.getLayoutResourceId();
 
-        mIconsContainer = new FrameLayout(context);
+        mIconsContainer = new FrameLayout(context) {
+            @Override
+            protected void dispatchDraw(Canvas canvas) {
+                // Glow: frosted dock plate drawn only around the icon row
+                if (mDockPlate != null && !mHasVerticalHotseat && mPlateHalfHeight > 0) {
+                    mDockPlate.setBounds(0, Math.round(mPlateCenterY - mPlateHalfHeight),
+                            getWidth(), Math.round(mPlateCenterY + mPlateHalfHeight));
+                    mDockPlate.draw(canvas);
+                }
+                super.dispatchDraw(canvas);
+            }
+        };
         mIconsContainer.setLayoutParams(new LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         mIconsContainer.setClipChildren(false);
@@ -209,26 +225,20 @@ public class Hotseat extends FrameLayout implements Insettable {
         var alphaValue = (transparency * 255) / 100;
         var baseColor = bgColor.getColorPreferenceEntry().getLightColor().invoke(getContext());
         var finalColor = Color.argb(alphaValue, Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
-        int insetHorizontalLeft = preferenceManager.getHotseatBGHorizontalInsetLeft().get();
-        int insetHorizontalRight = preferenceManager.getHotseatBGHorizontalInsetRight().get();
-        int insetVerticalTop = preferenceManager.getHotseatBGVerticalInsetTop().get();
-        int insetVerticalBottom = preferenceManager.getHotseatBGVerticalInsetBottom().get();
         float cornerRadiusDp = PreferenceCacheExtensionsKt.firstCached(
                 preferenceManager2.getHotseatBackgroundCornerRadius());
-        float cornerRadius = TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                cornerRadiusDp,
-                getResources().getDisplayMetrics());
         GradientDrawable background = new GradientDrawable();
         background.setColor(finalColor);
-        background.setCornerRadius(cornerRadius);
+        background.setCornerRadius(dpToPx(cornerRadiusDp));
         // Glow: thin light rim so the translucent dock reads as frosted glass
-        int strokeWidth = Math.max(1, Math.round(TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP, 1f, getResources().getDisplayMetrics())));
-        background.setStroke(strokeWidth, Color.argb(Math.min(255, alphaValue + 60), 255, 255, 255));
-        InsetDrawable bg = new InsetDrawable(background,
-                insetHorizontalLeft, insetVerticalTop, insetHorizontalRight, insetVerticalBottom);
-        setBackground(bg);
+        background.setStroke(Math.max(1, Math.round(dpToPx(1f))),
+                Color.argb(Math.min(255, alphaValue + 60), 255, 255, 255));
+        mDockPlate = background;
+    }
+
+    private float dpToPx(float dp) {
+        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp,
+                getResources().getDisplayMetrics());
     }
 
     /** Provides translation X for hotseat icons for the channel. */
@@ -458,7 +468,8 @@ public class Hotseat extends FrameLayout implements Insettable {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        int yThreshold = getMeasuredHeight() - getPaddingBottom();
+        // Glow: the icon row may be shifted below the search bar, so use its real bottom
+        int yThreshold = mIconsContainer.getBottom();
         if (ev.getY() > yThreshold || isTouchOnQsb(ev)) {
             return false;
         }
@@ -559,13 +570,46 @@ public class Hotseat extends FrameLayout implements Insettable {
         int paddingBottom = getPaddingBottom();
 
         DeviceProfile dp = mActivity.getDeviceProfile();
-        mIconsContainer.layout(paddingLeft, paddingTop, width - paddingRight,
-                height - paddingBottom);
-
-        int containerWidth = mIconsContainer.getWidth();
-        int containerHeight = mIconsContainer.getHeight();
         boolean showIndicator = mPagedView.isPagingEnabled() && !dp.isVerticalBarLayout();
         int indicatorSpace = showIndicator ? mPageIndicatorHeight : 0;
+        int containerHeight = Math.max(0, height - paddingTop - paddingBottom);
+        int qsbHeight = dp.getHotseatProfile().getQsbHeight();
+        int qsbBottomDefault = height - dp.getQsbOffsetY();
+
+        // Glow: search bar on top, dock plate with the icons below it (like iOS / Luminate)
+        boolean qsbAbove = !mHasVerticalHotseat && !dp.isVerticalBarLayout() && !dp.isQsbInline
+                && mQsb.getVisibility() == VISIBLE && qsbHeight > 0;
+        int containerTop = paddingTop;
+        int qsbTop = qsbBottomDefault - qsbHeight;
+        mPlateHalfHeight = 0;
+        if (qsbAbove) {
+            int pageHeight = containerHeight - indicatorSpace;
+            float available = qsbBottomDefault - paddingTop;
+            float platePad = dpToPx(12f);
+            float gap = dpToPx(14f);
+            float needed = dp.iconSizePx + 2 * platePad + gap + qsbHeight;
+            if (needed > available) {
+                float extra = Math.max(0f, available - dp.iconSizePx - qsbHeight);
+                float scale = extra / (2 * platePad + gap);
+                platePad *= scale;
+                gap *= scale;
+            }
+            float plateHalf = dp.iconSizePx / 2f + platePad;
+            float plateBottom = qsbBottomDefault;
+            float iconCenter = plateBottom - plateHalf;
+            containerTop = Math.round(iconCenter - pageHeight / 2f);
+            qsbTop = Math.max(0, Math.round(plateBottom - 2 * plateHalf - gap - qsbHeight));
+            mPlateCenterY = iconCenter - containerTop;
+            mPlateHalfHeight = plateHalf;
+        } else if (!mHasVerticalHotseat) {
+            mPlateCenterY = (containerHeight - indicatorSpace) / 2f;
+            mPlateHalfHeight = dp.iconSizePx / 2f + dpToPx(12f);
+        }
+        mIconsContainer.layout(paddingLeft, containerTop, width - paddingRight,
+                containerTop + containerHeight);
+        mIconsContainer.invalidate();
+
+        int containerWidth = mIconsContainer.getWidth();
 
         mPagedView.layout(0, 0, containerWidth, Math.max(0, containerHeight - indicatorSpace));
 
@@ -588,10 +632,7 @@ public class Hotseat extends FrameLayout implements Insettable {
             left = (width - qsbMeasuredWidth) / 2;
         }
         int right = left + qsbMeasuredWidth;
-
-        int bottom = height - dp.getQsbOffsetY();
-        int top = bottom - dp.getHotseatProfile().getQsbHeight();
-        mQsb.layout(left, top, right, bottom);
+        mQsb.layout(left, qsbTop, right, qsbTop + qsbHeight);
     }
 
     /**

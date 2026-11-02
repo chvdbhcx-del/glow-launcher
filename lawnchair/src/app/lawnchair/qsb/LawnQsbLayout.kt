@@ -93,12 +93,21 @@ class LawnQsbLayout(context: Context, attrs: AttributeSet?) : FrameLayout(contex
                         val style = buildQsbStyle(
                             context = LocalContext.current,
                             themed = themed,
-                            backgroundColor = getHotseatBackgroundColor(context, themed),
+                            // Glow: frosted white glass pill unless the user picked a themed bar
+                            backgroundColor = if (themed) getHotseatBackgroundColor(context, true) else android.graphics.Color.WHITE,
                             backgroundAlpha = prefs.hotseatQsbAlpha.observeAsState().value,
                             cornerRadius = prefs.hotseatQsbCornerRadius.observeAsState().value,
                             // Use light color as strokeColor is a static color that doesn't use darkColor
-                            strokeColor = prefs2.strokeColorStyle.asState().value.colorPreferenceEntry.lightColor.invoke(context),
-                            strokeWidth = prefs.hotseatQsbStrokeWidth.observeAsState().value,
+                            strokeColor = if (themed) {
+                                prefs2.strokeColorStyle.asState().value.colorPreferenceEntry.lightColor.invoke(context)
+                            } else {
+                                android.graphics.Color.argb(110, 255, 255, 255)
+                            },
+                            strokeWidth = if (themed) {
+                                prefs.hotseatQsbStrokeWidth.observeAsState().value
+                            } else {
+                                maxOf(prefs.hotseatQsbStrokeWidth.observeAsState().value, context.resources.displayMetrics.density)
+                            },
                         )
 
                         val actions = QsbActions(
@@ -132,6 +141,7 @@ class LawnQsbLayout(context: Context, attrs: AttributeSet?) : FrameLayout(contex
                             state = state,
                             style = style,
                             actions = actions,
+                            hint = context.getString(R.string.label_search),
                         )
                     }
                 }
