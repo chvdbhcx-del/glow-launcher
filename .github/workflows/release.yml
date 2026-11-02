@@ -1,0 +1,69 @@
+name: Release APK
+
+# Push a tag like v1.0.0 (or run manually) to build a signed release
+# APK and publish it as a GitHub Release.
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag, e.g. v1.0.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Write signing config
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            echo "::error::Signing secrets are missing. Add KEYSTORE, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD in the repository settings."
+            exit 1
+          fi
+          echo "$KEYSTORE" | base64 --decode > "$GITHUB_WORKSPACE/key.jks"
+          {
+            echo "storeFile=$GITHUB_WORKSPACE/key.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+      - name: Build release APK
+        env:
+          GLOW_RELEASE: 'true'
+        run: ./gradlew assembleLawnWithQuickstepGithubRelease
+      - name: Rename APK
+        run: |
+          apk=$(find build/outputs/apk -name '*.apk' | head -n 1)
+          cp "$apk" "Glow-Launcher-${RELEASE_TAG}.apk"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: glow-launcher-release
+          path: Glow-Launcher-*.apk
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 && gh release delete "$RELEASE_TAG" -y
+          gh release create "$RELEASE_TAG" "Glow-Launcher-${RELEASE_TAG}.apk" \
+            --title "Glow Launcher ${RELEASE_TAG#v}" \
+            --target "$GITHUB_SHA" \
+            --notes "Signed release build of Glow Launcher. Download the APK below and install it on Android 8.0 or newer."
