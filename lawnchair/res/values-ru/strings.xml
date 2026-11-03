@@ -41,4 +41,20 @@
     <string name="glow_theme_rose">Розовый шёлк</string>
     <string name="glow_theme_frost">Иней</string>
     <string name="glow_theme_peach">Персик</string>
+    <string name="glow_library_all_apps">А–Я</string>
+    <string name="glow_library_open_category">Открыть категорию</string>
+    <string name="glow_library_recent">Недавно добавленные</string>
+    <string name="glow_library_social">Общение</string>
+    <string name="glow_library_entertainment">Развлечения</string>
+    <string name="glow_library_creativity">Творчество</string>
+    <string name="glow_library_productivity">Работа и финансы</string>
+    <string name="glow_library_utilities">Утилиты</string>
+    <string name="glow_library_reading">Информация и чтение</string>
+    <string name="glow_library_shopping">Покупки и еда</string>
+    <string name="glow_library_travel">Путешествия</string>
+    <string name="glow_library_health">Здоровье и фитнес</string>
+    <string name="glow_library_games">Игры</string>
+    <string name="glow_library_education">Образование</string>
+    <string name="glow_library_other">Другое</string>
+    <string name="glow_library_search_hint">Библиотека приложений</string>
 </resources>

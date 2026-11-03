@@ -404,6 +404,14 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         setPageIndicatorInset();
     }
 
+    @Override
+    protected void onPulledPastLastPage() {
+        // Glow: like iOS, swiping left past the last home screen opens the App Library
+        if (mLauncher.isInState(LauncherState.NORMAL) && !mLauncher.isWorkspaceLocked()) {
+            mLauncher.getStateManager().goToState(LauncherState.ALL_APPS);
+        }
+    }
+
     private void setPageIndicatorInset() {
         DeviceProfile grid = mLauncher.getDeviceProfile();
 

@@ -77,6 +77,8 @@ import java.util.Locale
 import kotlin.math.max
 import kotlinx.coroutines.launch
 
+private const val GLOW_GLASS_SEARCH = true
+
 class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
     FrameLayout(context, attrs),
     Insettable,
@@ -187,7 +189,8 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
                 )
 
                 // Glow: at the bottom the bar is a frosted white pill that stays visible while typing
-                val atBottom = isAtBottom()
+                // Glow: frosted glass pill in every position (iOS App Library search)
+                val atBottom = GLOW_GLASS_SEARCH
                 val backgroundColor = when {
                     atBottom -> Color.WHITE
                     supportBlur -> ColorTokens.SearchboxHighlightBlur.resolveColor(context)
@@ -254,6 +257,7 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
                             state = state,
                             style = style,
                             actions = actions,
+                            hint = if (!isFocused && queryEmpty) context.getString(R.string.glow_library_search_hint) else null,
                         )
                     }
                 }
@@ -571,7 +575,7 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
     override fun getEditText() = input
 
     override fun setBackgroundVisibility(visible: Boolean, maxAlpha: Float) {
-        if (isAtBottom()) return
+        if (GLOW_GLASS_SEARCH || isAtBottom()) return
         if (bgVisible != visible) {
             bgVisible = visible
             bgAlpha = maxAlpha

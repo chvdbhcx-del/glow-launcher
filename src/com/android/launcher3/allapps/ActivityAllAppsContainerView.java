@@ -190,6 +190,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
      * View that defines the search box. Result is rendered inside {@link #mSearchRecyclerView}.
      */
     protected View mSearchContainer;
+    private static final boolean GLOW_SEARCH_AT_BOTTOM = false;
+    // Glow: iOS-style App Library shown instead of the A-Z list until the user asks for it
+    @Nullable protected app.lawnchair.allapps.GlowAppLibraryView mGlowLibrary;
+    private boolean mGlowLibraryVisible = true;
     protected SearchUiManager mSearchUiManager;
     protected boolean mUsingTabs;
     protected RecyclerViewFastScroller mTouchHandler;
@@ -372,6 +376,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
         updateBackgroundVisibility(mActivityContext.getDeviceProfile());
         mSearchUiManager.initializeSearch(this);
+        setUpGlowLibrary();
     }
 
     @Override
@@ -489,6 +494,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             mAllAppsTransitionController.animateAllAppsToNoScale();
             mFastScroller.setVisibility(showFastScroller ? VISIBLE : INVISIBLE);
         }
+        if (mGlowLibrary != null && goingToSearch) {
+            // Glow: get the library out of the way as soon as search starts
+            mGlowLibrary.setVisibility(GONE);
+        }
         mSearchTransitionController.animateToState(goingToSearch, durationMs,
                 /* onEndRunnable = */ () -> {
                     mIsSearching = goingToSearch;
@@ -531,6 +540,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         // input, container should move down.
         if (dragLayer.isEventOverView(mBottomSheetHandleArea, ev)) {
             return true;
+        }
+        if (isGlowLibraryShown()) {
+            // Glow: swipe down closes the drawer only when the library is scrolled to the top
+            return !mGlowLibrary.canScrollUp();
         }
         AllAppsRecyclerView rv = getActiveRecyclerView();
         if (rv == null) {
@@ -588,6 +601,12 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
         if (isSearching()) {
             mWorkManager.reset();
+        }
+        // Glow: every time the drawer is reopened it starts on the App Library
+        if (mGlowLibrary != null) {
+            mGlowLibrary.closeCategory(false);
+            mGlowLibrary.scrollToTop();
+            setGlowLibraryVisible(true);
         }
     }
 
@@ -1080,6 +1099,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
      * style) instead of the top.
      */
     public boolean isSearchBarAtBottom() {
+        // Glow: the iOS-style App Library keeps search on top
+        if (!GLOW_SEARCH_AT_BOTTOM) {
+            return false;
+        }
         DeviceProfile dp = mActivityContext.getDeviceProfile();
         return !isAppDrawerSearchBarHidden() && !isSearchBarFloating()
                 && !dp.shouldShowAllAppsOnSheet() && !dp.isVerticalBarLayout();
@@ -1277,6 +1300,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         if (!isSearching()) {
             rebindAdapters();
         }
+        if (mGlowLibrary != null) {
+            mGlowLibrary.rebuild();
+        }
         if (mHasWorkApps) {
             mWorkManager.reset();
         }
@@ -1287,6 +1313,43 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         mActivityContext.getStatsLogManager().logger()
                 .withCardinality(mAllAppsStore.getApps().length)
                 .log(LAUNCHER_ALLAPPS_COUNT);
+    }
+
+    private void setUpGlowLibrary() {
+        if (!(mActivityContext instanceof com.android.launcher3.Launcher)) {
+            return;
+        }
+        mGlowLibrary = new app.lawnchair.allapps.GlowAppLibraryView(getContext());
+        mGlowLibrary.setAppsProvider(() -> app.lawnchair.allapps.GlowAppLibraryView.visibleApps(
+                getContext(), mAllAppsStore.getApps()));
+        mGlowLibrary.setOnShowAllApps(() -> {
+            setGlowLibraryVisible(false);
+            return kotlin.Unit.INSTANCE;
+        });
+        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+        int index = indexOfChild(getAppsRecyclerViewContainer());
+        addView(mGlowLibrary, index >= 0 ? index + 1 : -1, lp);
+        layoutBelowSearchContainer(mGlowLibrary, false);
+        mGlowLibrary.rebuild();
+        updateSearchResultsVisibility();
+    }
+
+    /** Glow: switches between the App Library and the classic A-Z list. */
+    public void setGlowLibraryVisible(boolean visible) {
+        if (mGlowLibraryVisible == visible) {
+            return;
+        }
+        mGlowLibraryVisible = visible;
+        if (mGlowLibrary != null) {
+            mGlowLibrary.closeCategory(false);
+            mGlowLibrary.scrollToTop();
+        }
+        updateSearchResultsVisibility();
+    }
+
+    private boolean isGlowLibraryShown() {
+        return mGlowLibrary != null && mGlowLibraryVisible && !isSearching();
     }
 
     @Override
@@ -1411,6 +1474,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     public void setInsets(Rect insets) {
         mInsets.set(insets);
         DeviceProfile grid = mActivityContext.getDeviceProfile();
+        if (mGlowLibrary != null) {
+            mGlowLibrary.setBottomInset(insets.bottom);
+        }
 
         applyAdapterSideAndBottomPaddings(grid);
 
@@ -1479,6 +1545,15 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             // Keep the empty header shell hidden when search is off and there are no tabs.
             mHeader.setVisibility(
                     (isAppDrawerSearchBarHidden() && !mUsingTabs) ? View.GONE : View.VISIBLE);
+        }
+        if (mGlowLibrary != null) {
+            boolean library = isGlowLibraryShown();
+            mGlowLibrary.setVisibility(library ? VISIBLE : GONE);
+            if (library) {
+                getAppsRecyclerViewContainer().setVisibility(INVISIBLE);
+                mHeader.setVisibility(GONE);
+            }
+            mFastScroller.setVisibility(!library && showFastScroller ? VISIBLE : INVISIBLE);
         }
         if (mHeader.isSetUp()) {
             mHeader.setActiveRV(getCurrentPage());
