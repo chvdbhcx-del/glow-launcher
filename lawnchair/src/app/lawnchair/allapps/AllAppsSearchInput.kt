@@ -137,6 +137,7 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
         hint = ViewCompat.requireViewById(this, R.id.hint)
 
         input = ViewCompat.requireViewById(this, R.id.input)
+        input.setHint(R.string.glow_library_search_hint)
 
         qsbShell = ViewCompat.requireViewById(this, R.id.qsb_shell)
 
@@ -257,7 +258,6 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
                             state = state,
                             style = style,
                             actions = actions,
-                            hint = if (!isFocused && queryEmpty) context.getString(R.string.glow_library_search_hint) else null,
                         )
                     }
                 }
@@ -313,7 +313,8 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
                     animatePadding(initialPaddingLeft, initialPaddingRight)
                 }
                 focusedResultTitle = ""
-                input.setHint("")
+                // Glow: idle placeholder like the iOS App Library (an EditText hint hides itself while typing)
+                input.setHint(R.string.glow_library_search_hint)
                 hint.text = ""
             }
 

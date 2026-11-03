@@ -20,6 +20,8 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -66,6 +68,9 @@ class GlowAppLibraryView @JvmOverloads constructor(
         isVerticalScrollBarEnabled = false
         overScrollMode = OVER_SCROLL_NEVER
         clipToPadding = false
+        // Soft edge where tiles slide under the search bar instead of a hard cut
+        isVerticalFadingEdgeEnabled = true
+        setFadingEdgeLength((32 * resources.displayMetrics.density).toInt())
     }
     private val content = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -239,8 +244,14 @@ class GlowAppLibraryView @JvmOverloads constructor(
 
     private fun openCategory(category: Category) {
         closeCategory(animate = false)
+        val canBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        if (canBlur) {
+            // Frosted backdrop: blur the library behind the open category
+            val radius = 28 * density
+            scroll.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP))
+        }
         val overlay = FrameLayout(context).apply {
-            setBackgroundColor(Color.argb(110, 0, 0, 0))
+            setBackgroundColor(Color.argb(if (canBlur) 70 else 170, 0, 0, 0))
             isClickable = true
             setOnClickListener { closeCategory() }
             alpha = 0f
@@ -253,7 +264,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
 
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = glass(dp(30).toFloat(), fillAlpha = 70)
+            background = glass(dp(30).toFloat(), fillAlpha = if (canBlur) 64 else 90, strokeAlpha = 50)
             setPadding(cardPad, cardPad, cardPad, cardPad)
             isClickable = true
         }
@@ -300,6 +311,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
     fun closeCategory(animate: Boolean = true): Boolean {
         val overlay = folderOverlay ?: return false
         folderOverlay = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) scroll.setRenderEffect(null)
         if (animate) {
             overlay.animate().alpha(0f).setDuration(140).withEndAction { removeView(overlay) }.start()
         } else {
@@ -308,10 +320,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
         return true
     }
 
-    private fun glass(radius: Float, fillAlpha: Int = 46) = GradientDrawable().apply {
+    // Matte frosted material: soft white tint with a faint rim (the drawer behind is already blurred)
+    private fun glass(radius: Float, fillAlpha: Int = 40, strokeAlpha: Int = 34) = GradientDrawable().apply {
         cornerRadius = radius
         setColor(Color.argb(fillAlpha, 255, 255, 255))
-        setStroke(maxOf(1, density.toInt()), Color.argb(80, 255, 255, 255))
+        setStroke(maxOf(1, density.toInt()), Color.argb(strokeAlpha, 255, 255, 255))
     }
 
     private fun dp(value: Int): Int = (value * density).toInt()
