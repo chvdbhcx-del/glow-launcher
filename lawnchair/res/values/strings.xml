@@ -1169,4 +1169,9 @@
     <string name="glow_indicator_capsule">Capsule</string>
     <string name="glow_indicator_line">Line</string>
     <string name="glow_indicator_none">None</string>
+    <string name="glow_gesture_flashlight">Flashlight</string>
+    <string name="glow_gesture_screenshot">Take screenshot</string>
+    <string name="glow_gesture_edit_home">Edit Home Screen</string>
+    <string name="glow_gesture_no_flashlight">This device has no flashlight</string>
+    <string name="glow_gesture_screenshot_a11y_hint">take screenshots</string>
 </resources>

@@ -7,7 +7,10 @@ import android.graphics.drawable.Icon
 import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.createBitmap
+import app.lawnchair.gestures.handlers.EditHomeScreenGestureHandler
+import app.lawnchair.gestures.handlers.FlashlightGestureHandler
 import app.lawnchair.gestures.handlers.GestureHandler
+import app.lawnchair.gestures.handlers.ScreenshotGestureHandler
 import app.lawnchair.gestures.handlers.NoOpGestureHandler
 import app.lawnchair.gestures.handlers.OpenAppDrawerGestureHandler
 import app.lawnchair.gestures.handlers.OpenAppGestureHandler
@@ -127,6 +130,27 @@ sealed class GestureHandlerConfig {
     data object OpenAssistant :
         Simple(R.string.gesture_handler_open_assistant, ::OpenAssistantHandler) {
         override val iconRes = R.drawable.ic_mic_flat
+    }
+
+    @Serializable
+    @SerialName("glowFlashlight")
+    data object Flashlight :
+        Simple(R.string.glow_gesture_flashlight, ::FlashlightGestureHandler) {
+        override val iconRes = R.drawable.ic_glow_flashlight
+    }
+
+    @Serializable
+    @SerialName("glowScreenshot")
+    data object Screenshot :
+        Simple(R.string.glow_gesture_screenshot, ::ScreenshotGestureHandler) {
+        override val iconRes = R.drawable.ic_glow_screenshot
+    }
+
+    @Serializable
+    @SerialName("glowEditHome")
+    data object EditHomeScreen :
+        Simple(R.string.glow_gesture_edit_home, ::EditHomeScreenGestureHandler) {
+        override val iconRes = R.drawable.ic_glow_customize
     }
 
     @Serializable

@@ -92,4 +92,9 @@
     <string name="glow_indicator_capsule">Капсула</string>
     <string name="glow_indicator_line">Линия</string>
     <string name="glow_indicator_none">Нет</string>
+    <string name="glow_gesture_flashlight">Фонарик</string>
+    <string name="glow_gesture_screenshot">Снимок экрана</string>
+    <string name="glow_gesture_edit_home">Редактировать экран «Домой»</string>
+    <string name="glow_gesture_no_flashlight">На этом устройстве нет фонарика</string>
+    <string name="glow_gesture_screenshot_a11y_hint">делать снимки экрана</string>
 </resources>
