@@ -892,6 +892,10 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
             public void onAnimationStart(Animator animation) {
                 mFolderIcon.setIconVisible(false);
                 mFolderIcon.drawLeaveBehindIfExists();
+                // Glow: blur and dim the home screen behind the folder
+                if (mActivityContext instanceof Launcher glowLauncher) {
+                    app.lawnchair.views.GlowFolderBackdrop.show(glowLauncher);
+                }
             }
 
             @Override
@@ -1016,6 +1020,9 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
 
         if (mFolderIcon != null) {
             mFolderIcon.clearLeaveBehindIfExists();
+        }
+        if (mActivityContext instanceof Launcher glowLauncher) {
+            app.lawnchair.views.GlowFolderBackdrop.hide(glowLauncher, animate);
         }
 
         if (animate) {
