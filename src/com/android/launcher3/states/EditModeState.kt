@@ -16,15 +16,16 @@
 package com.android.launcher3.states
 
 import android.content.Context
-import com.android.launcher3.Flags.enableScalingRevealHomeAnimation
 import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherState
-import com.android.launcher3.R
 import com.android.launcher3.logging.StatsLogManager
 import com.android.launcher3.views.ActivityContext
-import kotlin.math.min
 
-/** Definition for Edit Mode state used for home gardening multi-select */
+/**
+ * Glow: iOS-style "jiggle" edit mode. The home screen keeps its full size and the
+ * dock stays in place; icons wiggle and show remove badges (see GlowEditMode), and
+ * the Edit / Done buttons live at the top (GlowEditOverlay).
+ */
 class EditModeState(id: Int) : LauncherState(id, StatsLogManager.LAUNCHER_STATE_HOME, STATE_FLAGS) {
 
     companion object {
@@ -34,93 +35,23 @@ class EditModeState(id: Int) : LauncherState(id, StatsLogManager.LAUNCHER_STATE_
             (FLAG_MULTI_PAGE or
                 FLAG_WORKSPACE_INACCESSIBLE or
                 FLAG_DISABLE_RESTORE or
-                FLAG_WORKSPACE_ICONS_CAN_BE_DRAGGED or
-                FLAG_WORKSPACE_HAS_BACKGROUNDS)
-
-        private fun getEditModePageStripHeightPx(launcher: Launcher): Int =
-            launcher.resources.getDimensionPixelSize(R.dimen.edit_mode_page_strip_height)
-
-        private fun getEditModeWorkspaceVerticalBounds(launcher: Launcher): Pair<Float, Float> {
-            val grid = launcher.deviceProfile
-            val top = (grid.getInsets().top + grid.workspacePadding.top).toFloat()
-
-            val stripHeightPx = getEditModePageStripHeightPx(launcher)
-            val bottomGap =
-                launcher.resources.getDimensionPixelSize(
-                    R.dimen.edit_mode_workspace_bottom_gap,
-                )
-            val hotseat = launcher.hotseat
-            val bottom =
-                if (hotseat.top > 0) {
-                    hotseat.top + hotseat.translationY - bottomGap
-                } else {
-                    grid.getCellLayoutSpringLoadShrunkBottom(launcher) - stripHeightPx
-                }
-            return top to bottom
-        }
-
-        private fun getEditModeWorkspaceScale(
-            launcher: Launcher,
-            top: Float,
-            bottom: Float,
-        ): Float {
-            val grid = launcher.deviceProfile
-            var scale = (bottom - top) / grid.cellLayoutHeight.toFloat()
-            scale = min(scale, 1f)
-
-            val workspaceWidth = grid.deviceProperties.availableWidthPx
-            val scaledWorkspaceWidth = workspaceWidth * scale
-            val maxAvailableWidth =
-                workspaceWidth - (2 * grid.workspaceSpringLoadedMinNextPageVisiblePx)
-            if (scaledWorkspaceWidth > maxAvailableWidth) {
-                scale *= maxAvailableWidth / scaledWorkspaceWidth
-            }
-            return scale
-        }
-
-        private fun getEditModeWorkspaceScaleAndTranslation(
-            launcher: Launcher,
-        ): ScaleAndTranslation {
-            val ws = launcher.workspace
-            if (ws.childCount == 0) {
-                return ScaleAndTranslation(1f, 0f, 0f)
-            }
-
-            val (top, bottom) = getEditModeWorkspaceVerticalBounds(launcher)
-            val scale = getEditModeWorkspaceScale(launcher, top, bottom)
-
-            val halfHeight = ws.height / 2f
-            val myCenter = ws.top + halfHeight
-            val cellTopFromCenter = halfHeight - ws.getChildAt(0).top
-            val actualCellTop = myCenter - cellTopFromCenter * scale
-            return ScaleAndTranslation(scale, 0f, top - actualCellTop)
-        }
+                FLAG_WORKSPACE_ICONS_CAN_BE_DRAGGED)
     }
 
-    override fun getTransitionDuration(context: ActivityContext, isToState: Boolean) = 150
+    override fun getTransitionDuration(context: ActivityContext, isToState: Boolean) = 220
 
-    override fun <T> getDepthUnchecked(context: T): Float where T : Context?, T : ActivityContext? {
-        if (enableScalingRevealHomeAnimation()) {
-            return DEPTH_15_PERCENT
-        } else {
-            return 0.5f
-        }
-    }
+    override fun <T> getDepthUnchecked(context: T): Float where T : Context?, T : ActivityContext? = 0f
 
     override fun getWorkspaceScaleAndTranslation(launcher: Launcher): ScaleAndTranslation =
-        getEditModeWorkspaceScaleAndTranslation(launcher)
+        ScaleAndTranslation(1f, 0f, 0f)
 
-    override fun getHotseatScaleAndTranslation(launcher: Launcher): ScaleAndTranslation {
-        val offset = getEditModePageStripHeightPx(launcher).toFloat()
-        return ScaleAndTranslation(1f, 0f, -offset)
-    }
+    override fun getHotseatScaleAndTranslation(launcher: Launcher): ScaleAndTranslation =
+        ScaleAndTranslation(1f, 0f, 0f)
 
-    // Glow: the dock is replaced by the edit toolbar (GlowEditOverlay) in this state
-    override fun getVisibleElements(launcher: Launcher): Int = WORKSPACE_PAGE_INDICATOR
+    override fun getVisibleElements(launcher: Launcher): Int =
+        HOTSEAT_ICONS or WORKSPACE_PAGE_INDICATOR
 
-    override fun getWorkspaceBackgroundAlpha(launcher: Launcher): Float {
-        return 0.2f
-    }
+    override fun getWorkspaceBackgroundAlpha(launcher: Launcher): Float = 0f
 
     override fun onLeavingState(launcher: Launcher?, toState: LauncherState?) {
         // cleanup any changes to workspace

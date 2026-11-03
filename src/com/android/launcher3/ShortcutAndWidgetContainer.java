@@ -289,6 +289,29 @@ public class ShortcutAndWidgetContainer extends ViewGroup implements FolderIcon.
         }
     }
 
+    /** Glow: which kind of grid this container belongs to (workspace, hotseat or folder). */
+    public int getContainerType() {
+        return mContainerType;
+    }
+
+    @Override
+    protected void dispatchDraw(android.graphics.Canvas canvas) {
+        super.dispatchDraw(canvas);
+        // Glow: "−" remove badges of the iOS-style edit mode
+        if (mContainerType != FOLDER) {
+            app.lawnchair.views.GlowEditMode.drawBadges(this, canvas);
+        }
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (mContainerType != FOLDER
+                && app.lawnchair.views.GlowEditMode.dispatchBadgeTouch(this, ev)) {
+            return true;
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         if (ev.getAction() == ACTION_DOWN && getAlpha() == 0) {

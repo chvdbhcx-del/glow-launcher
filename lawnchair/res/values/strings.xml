@@ -1134,4 +1134,18 @@
     <string name="glow_library_education">Education</string>
     <string name="glow_library_other">Other</string>
     <string name="glow_library_search_hint">App Library</string>
+    <string name="glow_edit">Edit</string>
+    <string name="glow_done">Done</string>
+    <string name="glow_add_widget">Add Widget</string>
+    <string name="glow_change_wallpaper">Change Wallpaper</string>
+    <string name="glow_launcher_settings">Settings</string>
+    <string name="glow_remove_title">Remove “%1$s”?</string>
+    <string name="glow_remove_app_message">Removing from the Home Screen will keep the app in your App Library.</string>
+    <string name="glow_remove_folder_message">The folder and its icons will be removed from the Home Screen. Apps stay in your App Library.</string>
+    <string name="glow_remove_widget_message">The widget will be removed from the Home Screen.</string>
+    <string name="glow_remove_from_home">Remove from Home Screen</string>
+    <string name="glow_delete_app">Delete App</string>
+    <string name="glow_remove">Remove</string>
+    <string name="glow_cancel">Cancel</string>
+    <string name="glow_remove_badge">Remove %1$s</string>
 </resources>

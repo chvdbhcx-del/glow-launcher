@@ -57,4 +57,18 @@
     <string name="glow_library_education">Образование</string>
     <string name="glow_library_other">Другое</string>
     <string name="glow_library_search_hint">Библиотека приложений</string>
+    <string name="glow_edit">Изменить</string>
+    <string name="glow_done">Готово</string>
+    <string name="glow_add_widget">Добавить виджет</string>
+    <string name="glow_change_wallpaper">Сменить обои</string>
+    <string name="glow_launcher_settings">Настройки</string>
+    <string name="glow_remove_title">Удалить «%1$s»?</string>
+    <string name="glow_remove_app_message">Если убрать с экрана «Домой», приложение останется в библиотеке приложений.</string>
+    <string name="glow_remove_folder_message">Папка и её иконки будут убраны с экрана «Домой». Приложения останутся в библиотеке приложений.</string>
+    <string name="glow_remove_widget_message">Виджет будет убран с экрана «Домой».</string>
+    <string name="glow_remove_from_home">Убрать с экрана «Домой»</string>
+    <string name="glow_delete_app">Удалить приложение</string>
+    <string name="glow_remove">Удалить</string>
+    <string name="glow_cancel">Отменить</string>
+    <string name="glow_remove_badge">Удалить %1$s</string>
 </resources>
