@@ -97,10 +97,12 @@ class GlowAppLibraryView @JvmOverloads constructor(
         scroll.setPadding(side, dp(4), side, bottom + dp(24))
     }
 
-    fun canScrollUp(): Boolean = folderOverlay != null || scroll.canScrollVertically(-1)
+    fun canScrollUp(): Boolean = folderOverlay != null ||
+        (listScroll?.canScrollVertically(-1) ?: scroll.canScrollVertically(-1))
 
     fun scrollToTop() {
         scroll.scrollTo(0, 0)
+        listScroll?.scrollTo(0, 0)
     }
 
     /** Recomputes categories in the background and rebuilds the tiles. */
@@ -142,7 +144,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
             gravity = Gravity.CENTER
             setPadding(dp(14), 0, dp(14), 0)
             background = glass(dp(16).toFloat())
-            setOnClickListener { onShowAllApps?.invoke() }
+            setOnClickListener { openList() }
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(32)).apply {
             gravity = Gravity.END
             bottomMargin = dp(12)
@@ -307,9 +309,183 @@ class GlowAppLibraryView @JvmOverloads constructor(
         card.animate().scaleX(1f).scaleY(1f).setDuration(200).start()
     }
 
-    /** Closes an open category. Returns true if one was open. */
+    // ---------------------------------------------------------------------------------------
+    // Alphabetical list (the "A–Z" pill), with an index strip on the right
+    // ---------------------------------------------------------------------------------------
+
+    private var listOverlay: View? = null
+    private var listScroll: ScrollView? = null
+
+    private fun openList() {
+        if (listOverlay != null) return
+        val apps = appsProvider?.invoke() ?: return
+        val collator = java.text.Collator.getInstance(Locale.getDefault())
+        val sorted = apps.sortedWith(Comparator { a, b -> collator.compare(a.title?.toString() ?: "", b.title?.toString() ?: "") })
+
+        val overlay = FrameLayout(context).apply {
+            alpha = 0f
+            isClickable = true
+        }
+        val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val back = TextView(context).apply {
+            text = context.getString(R.string.glow_library_categories)
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setPadding(dp(14), 0, dp(14), 0)
+            background = glass(dp(16).toFloat())
+            setOnClickListener { closeList(true) }
+        }
+        column.addView(back, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(32)).apply {
+            gravity = Gravity.END
+            marginEnd = dp(SIDE_PADDING_DP)
+            topMargin = dp(4)
+            bottomMargin = dp(8)
+        })
+
+        val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val sections = linkedMapOf<String, View>()
+        var lastLetter: String? = null
+        sorted.forEach { app ->
+            val letter = sectionOf(app)
+            if (letter != lastLetter) {
+                lastLetter = letter
+                val header = TextView(context).apply {
+                    text = letter
+                    setTextColor(Color.argb(200, 255, 255, 255))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                    typeface = Typeface.DEFAULT_BOLD
+                    setPadding(dp(SIDE_PADDING_DP + 4), dp(14), 0, dp(4))
+                }
+                sections[letter] = header
+                list.addView(header)
+            } else {
+                list.addView(View(context).apply { setBackgroundColor(Color.argb(40, 255, 255, 255)) },
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, (density * 0.5f).toInt())).apply {
+                        marginStart = dp(SIDE_PADDING_DP + 4 + 42 + 14)
+                        marginEnd = dp(28)
+                    })
+            }
+            list.addView(createListRow(app))
+        }
+        val listScroll = ScrollView(context).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = OVER_SCROLL_NEVER
+            clipToPadding = false
+            isVerticalFadingEdgeEnabled = true
+            setFadingEdgeLength(dp(32))
+            setPadding(0, 0, 0, scroll.paddingBottom)
+            addView(list, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        }
+        column.addView(listScroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        overlay.addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+
+        // Index strip: tap or slide over a letter to jump to its section
+        val letters = sections.keys.toList()
+        val index = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            letters.forEach { l ->
+                addView(TextView(context).apply {
+                    text = l
+                    setTextColor(Color.argb(220, 255, 255, 255))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f)
+                    typeface = Typeface.DEFAULT_BOLD
+                    gravity = Gravity.CENTER
+                    includeFontPadding = false
+                }, LinearLayout.LayoutParams(dp(22), LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(1)
+                    bottomMargin = dp(1)
+                })
+            }
+            var lastJump = -1
+            setOnTouchListener { v, ev ->
+                if (letters.isEmpty() || v.height == 0) return@setOnTouchListener false
+                val group = v as LinearLayout
+                val first = group.getChildAt(0)
+                val last = group.getChildAt(group.childCount - 1)
+                val span = (last.bottom - first.top).coerceAtLeast(1)
+                val i = (((ev.y - first.top) / span) * letters.size).toInt().coerceIn(0, letters.size - 1)
+                if (i != lastJump) {
+                    lastJump = i
+                    sections[letters[i]]?.let { listScroll.scrollTo(0, it.top) }
+                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                }
+                if (ev.actionMasked == android.view.MotionEvent.ACTION_UP ||
+                    ev.actionMasked == android.view.MotionEvent.ACTION_CANCEL
+                ) {
+                    lastJump = -1
+                }
+                v.parent?.requestDisallowInterceptTouchEvent(true)
+                true
+            }
+        }
+        overlay.addView(index, LayoutParams(dp(26), LayoutParams.MATCH_PARENT, Gravity.END).apply {
+            topMargin = dp(44)
+            bottomMargin = scroll.paddingBottom
+        })
+
+        addView(overlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        listOverlay = overlay
+        this.listScroll = listScroll
+        scroll.animate().alpha(0f).setDuration(140).start()
+        overlay.animate().alpha(1f).setDuration(180).start()
+    }
+
+    private fun closeList(animate: Boolean): Boolean {
+        val overlay = listOverlay ?: return false
+        listOverlay = null
+        listScroll = null
+        scroll.animate().cancel()
+        if (animate) {
+            scroll.animate().alpha(1f).setDuration(180).start()
+            overlay.animate().alpha(0f).setDuration(140).withEndAction { removeView(overlay) }.start()
+        } else {
+            scroll.alpha = 1f
+            removeView(overlay)
+        }
+        return true
+    }
+
+    private fun sectionOf(app: AppInfo): String {
+        val c = app.title?.toString()?.trim()?.firstOrNull() ?: return "#"
+        return if (c.isLetter()) c.uppercaseChar().toString() else "#"
+    }
+
+    private fun createListRow(app: AppInfo): View = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(SIDE_PADDING_DP + 4), dp(7), dp(28), dp(7))
+        tag = app
+        isClickable = true
+        isFocusable = true
+        contentDescription = app.title
+        val ta = context.obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground))
+        foreground = ta.getDrawable(0)
+        ta.recycle()
+        setOnClickListener(launcher.itemOnClickListener)
+        addView(ImageView(context).apply {
+            setImageDrawable(app.newIcon(context))
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(dp(42), dp(42)))
+        addView(TextView(context).apply {
+            text = app.title
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+            marginStart = dp(14)
+        })
+    }
+
+    /** Closes an open category or the alphabetical list. Returns true if one was open. */
     fun closeCategory(animate: Boolean = true): Boolean {
-        val overlay = folderOverlay ?: return false
+        val closedList = closeList(animate)
+        val overlay = folderOverlay ?: return closedList
         folderOverlay = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) scroll.setRenderEffect(null)
         if (animate) {

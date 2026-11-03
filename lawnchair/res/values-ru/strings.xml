@@ -97,4 +97,5 @@
     <string name="glow_gesture_edit_home">Редактировать экран «Домой»</string>
     <string name="glow_gesture_no_flashlight">На этом устройстве нет фонарика</string>
     <string name="glow_gesture_screenshot_a11y_hint">делать снимки экрана</string>
+    <string name="glow_library_categories">Категории</string>
 </resources>
