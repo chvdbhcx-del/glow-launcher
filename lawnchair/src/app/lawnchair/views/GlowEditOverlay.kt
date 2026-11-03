@@ -133,6 +133,9 @@ class GlowEditOverlay @JvmOverloads constructor(
         }
         val items = listOf<Triple<Int, Int, () -> Unit>>(
             Triple(R.string.glow_add_widget, R.drawable.ic_widget) { launcher.openWidgetPicker() },
+            Triple(R.string.glow_customize, R.drawable.ic_glow_customize) {
+                GlowCustomizeSheet(launcher).show()
+            },
             Triple(R.string.glow_change_wallpaper, R.drawable.ic_wallpaper) {
                 launcher.startActivity(Intent(launcher, GlowWallpaperActivity::class.java))
             },

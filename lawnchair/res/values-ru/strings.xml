@@ -71,4 +71,19 @@
     <string name="glow_remove">Удалить</string>
     <string name="glow_cancel">Отменить</string>
     <string name="glow_remove_badge">Удалить %1$s</string>
+    <string name="glow_customize">Настроить</string>
+    <string name="glow_customize_icons">Иконки</string>
+    <string name="glow_customize_shape">Форма</string>
+    <string name="glow_customize_size">Размер</string>
+    <string name="glow_customize_grid">Сетка</string>
+    <string name="glow_shape_rounded">Скруглённая</string>
+    <string name="glow_shape_squircle">Сквиркл</string>
+    <string name="glow_shape_circle">Круг</string>
+    <string name="glow_shape_soft_square">Мягкий квадрат</string>
+    <string name="glow_shape_teardrop">Капля</string>
+    <string name="glow_shape_square">Квадрат</string>
+    <string name="glow_size_small">Маленькие</string>
+    <string name="glow_size_medium">Обычные</string>
+    <string name="glow_size_large">Крупные</string>
+    <string name="glow_grid_format">%1$d × %2$d</string>
 </resources>

@@ -1148,4 +1148,19 @@
     <string name="glow_remove">Remove</string>
     <string name="glow_cancel">Cancel</string>
     <string name="glow_remove_badge">Remove %1$s</string>
+    <string name="glow_customize">Customize</string>
+    <string name="glow_customize_icons">Icons</string>
+    <string name="glow_customize_shape">Shape</string>
+    <string name="glow_customize_size">Size</string>
+    <string name="glow_customize_grid">Grid</string>
+    <string name="glow_shape_rounded">Rounded</string>
+    <string name="glow_shape_squircle">Squircle</string>
+    <string name="glow_shape_circle">Circle</string>
+    <string name="glow_shape_soft_square">Soft square</string>
+    <string name="glow_shape_teardrop">Teardrop</string>
+    <string name="glow_shape_square">Square</string>
+    <string name="glow_size_small">Small</string>
+    <string name="glow_size_medium">Default</string>
+    <string name="glow_size_large">Large</string>
+    <string name="glow_grid_format">%1$d × %2$d</string>
 </resources>
