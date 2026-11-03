@@ -143,7 +143,8 @@ class PreferenceManager @Inject constructor(
     val recentActionOrder = StringPref("pref_recentActionOrder", "0,1,2,3,4", recreate)
 
     private val fontCache = FontCache.INSTANCE.get(context)
-    val fontWorkspace = FontPref("pref_workspaceFont", fontCache.uiText, recreate)
+    // Glow: iOS-like home screen labels in the system font, medium weight
+    val fontWorkspace = FontPref("pref_workspaceFont", FontCache.SystemFont("sans-serif-medium"), recreate)
     val fontHeading = FontPref("pref_fontHeading", fontCache.uiRegular, recreate)
     val fontHeadingMedium = FontPref("pref_fontHeadingMedium", fontCache.uiMedium, recreate)
     val fontBody = FontPref("pref_fontBody", fontCache.uiText, recreate)
