@@ -117,14 +117,16 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
             R.string.glow_customize_shape,
             R.string.glow_customize_size,
             R.string.glow_customize_grid,
+            R.string.glow_customize_indicator,
         ).forEachIndexed { index, label ->
             val tab = TextView(context).apply {
                 setText(label)
                 setTextColor(Color.WHITE)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
                 typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                 gravity = Gravity.CENTER
                 maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
                 setOnClickListener { selectTab(index) }
             }
             tabs += tab
@@ -176,7 +178,8 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
                 0 -> iconsPage()
                 1 -> shapePage()
                 2 -> sizePage()
-                else -> gridPage()
+                3 -> gridPage()
+                else -> indicatorPage()
             },
         )
     }
@@ -294,6 +297,31 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
         return scroller(row)
     }
 
+    private fun indicatorPage(): View {
+        val row = optionRow()
+        val current = GlowPageIndicator.getStyle(launcher)
+        val styles = listOf(
+            GlowPageIndicator.STYLE_SEARCH to R.string.glow_indicator_search,
+            GlowPageIndicator.STYLE_DOTS to R.string.glow_indicator_dots,
+            GlowPageIndicator.STYLE_CAPSULE to R.string.glow_indicator_capsule,
+            GlowPageIndicator.STYLE_LINE to R.string.glow_indicator_line,
+            GlowPageIndicator.STYLE_NONE to R.string.glow_indicator_none,
+        )
+        val options = mutableListOf<View>()
+        styles.forEach { (style, label) ->
+            val option = option(IndicatorPreview(context, style), context.getString(label), style == current)
+            option.setOnClickListener {
+                markSelected(options, option)
+                // The launcher restarts to rebuild the dock, so close the sheet first.
+                dialog.dismiss()
+                GlowPageIndicator.setStyle(launcher, style)
+            }
+            options += option
+            row.addView(option)
+        }
+        return scroller(row)
+    }
+
     // ---------------------------------------------------------------------------------------
     // Building blocks
     // ---------------------------------------------------------------------------------------
@@ -378,6 +406,20 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
             pathMatrix.postTranslate(left, top)
             path.transform(pathMatrix)
             canvas.drawPath(path, paint)
+        }
+    }
+
+    /** A scaled-down home screen page indicator. */
+    private class IndicatorPreview(context: Context, private val style: String) : View(context) {
+        override fun onDraw(canvas: Canvas) {
+            canvas.save()
+            canvas.scale(0.45f, 0.45f, width / 2f, height / 2f)
+            GlowPageIndicator.draw(
+                this, canvas, style, 3, 1f,
+                if (style == GlowPageIndicator.STYLE_SEARCH) 0f else 1f,
+                false,
+            )
+            canvas.restore()
         }
     }
 

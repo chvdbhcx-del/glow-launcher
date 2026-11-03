@@ -86,4 +86,10 @@
     <string name="glow_size_medium">Обычные</string>
     <string name="glow_size_large">Крупные</string>
     <string name="glow_grid_format">%1$d × %2$d</string>
+    <string name="glow_customize_indicator">Страницы</string>
+    <string name="glow_indicator_search">Поиск</string>
+    <string name="glow_indicator_dots">Точки</string>
+    <string name="glow_indicator_capsule">Капсула</string>
+    <string name="glow_indicator_line">Линия</string>
+    <string name="glow_indicator_none">Нет</string>
 </resources>

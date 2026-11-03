@@ -430,6 +430,13 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             // Glow: keep the page dots clear of the search pill that now sits on top of the dock
             lp.bottomMargin += Math.round(10 * getResources().getDisplayMetrics().density);
         }
+        if (mPageIndicator instanceof com.android.launcher3.pageindicators.PageIndicatorDots dots) {
+            dots.setGlowHomeIndicator(true);
+            int glowHeight = app.lawnchair.views.GlowPageIndicator.getViewHeight(
+                    getContext(), dots.getGlowStyle());
+            lp.height = glowHeight > 0 ? glowHeight
+                    : getResources().getDimensionPixelSize(R.dimen.workspace_page_indicator_height);
+        }
         mPageIndicator.setLayoutParams(lp);
     }
 

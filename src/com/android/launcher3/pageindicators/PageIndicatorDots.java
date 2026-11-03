@@ -517,7 +517,55 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
         canvas.drawRoundRect(mCapsuleRect, halfHeight, halfHeight, mCapsuleStrokePaint);
     }
 
+    // Glow: style of the home screen indicator (null for folders and other indicators)
+    @Nullable private String mGlowStyle;
+    private final RectF mGlowTouchRect = new RectF();
+
+    /** Glow: the indicator of the home screen uses a selectable style. */
+    public void setGlowHomeIndicator(boolean isHome) {
+        mGlowStyle = isHome ? app.lawnchair.views.GlowPageIndicator.getStyle(getContext()) : null;
+        invalidate();
+    }
+
+    @Nullable
+    public String getGlowStyle() {
+        return mGlowStyle;
+    }
+
+    @Override
+    public boolean onTouchEvent(android.view.MotionEvent ev) {
+        if (!app.lawnchair.views.GlowPageIndicator.STYLE_SEARCH.equals(mGlowStyle)) {
+            return super.onTouchEvent(ev);
+        }
+        // Only the search pill itself is touchable, the rest of the row passes through.
+        app.lawnchair.views.GlowPageIndicator.getSearchPillBounds(this, mGlowTouchRect);
+        boolean inside = mGlowTouchRect.contains(ev.getX(), ev.getY());
+        switch (ev.getActionMasked()) {
+            case android.view.MotionEvent.ACTION_DOWN:
+                return inside;
+            case android.view.MotionEvent.ACTION_UP:
+                if (inside && getContext() instanceof com.android.launcher3.Launcher) {
+                    com.android.launcher3.Launcher launcher =
+                            (com.android.launcher3.Launcher) getContext();
+                    if (launcher.isInState(com.android.launcher3.LauncherState.NORMAL)) {
+                        performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                        app.lawnchair.views.GlowPageIndicator.openSearch(launcher);
+                    }
+                }
+                return true;
+            default:
+                return true;
+        }
+    }
+
     private void onDrawDots(Canvas canvas) {
+        if (mGlowStyle != null) {
+            float dotsAlpha = (mShouldAutoHide && mTotalScroll == 0)
+                    ? 0f : mPaginationPaint.getAlpha() / 255f;
+            app.lawnchair.views.GlowPageIndicator.draw(this, canvas, mGlowStyle, mNumPages,
+                    mCurrentPosition, dotsAlpha, mIsRtl);
+            return;
+        }
         if (mNumPages < 2) {
             return;
         }
