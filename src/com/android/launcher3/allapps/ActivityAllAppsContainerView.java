@@ -1542,7 +1542,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
 
-        if (mNavBarScrimHeight > 0) {
+        // Glow: no opaque strip under the App Library, the tiles fade into the nav bar
+        if (mNavBarScrimHeight > 0 && !isGlowLibraryShown()) {
             float left = (getWidth() - getWidth() / getScaleX()) / 2;
             float top = getHeight() / 2f + (getHeight() / 2f - mNavBarScrimHeight) / getScaleY();
             canvas.drawRect(left, top, getWidth() / getScaleX(),
