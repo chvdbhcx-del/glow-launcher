@@ -633,6 +633,33 @@ public class Hotseat extends FrameLayout implements Insettable {
         }
         int right = left + qsbMeasuredWidth;
         mQsb.layout(left, qsbTop, right, qsbTop + qsbHeight);
+
+        // Glow: keep the home page indicator ("Search" pill / dots) just above the dock
+        if (!mHasVerticalHotseat && !dp.isVerticalBarLayout() && mPlateHalfHeight > 0) {
+            int dockTop = Math.round(containerTop + mPlateCenterY - mPlateHalfHeight);
+            if (qsbAbove) dockTop = Math.min(dockTop, qsbTop);
+            mGlowDockTop = dockTop;
+            post(this::alignGlowPageIndicator);
+        }
+    }
+
+    private int mGlowDockTop = -1;
+
+    /** Glow: moves the workspace page indicator so its bottom sits 8dp above the dock. */
+    private void alignGlowPageIndicator() {
+        if (mWorkspace == null || mGlowDockTop < 0 || getHeight() == 0) return;
+        View indicator = (View) mWorkspace.getPageIndicator();
+        if (indicator == null || indicator.getHeight() == 0
+                || !(indicator.getLayoutParams() instanceof FrameLayout.LayoutParams lp)
+                || indicator.getParent() != getParent()) {
+            return;
+        }
+        int wantedBottom = getTop() + mGlowDockTop - Math.round(dpToPx(8f));
+        int delta = indicator.getBottom() - wantedBottom;
+        if (Math.abs(delta) > 1) {
+            lp.bottomMargin += delta;
+            indicator.setLayoutParams(lp);
+        }
     }
 
     /**

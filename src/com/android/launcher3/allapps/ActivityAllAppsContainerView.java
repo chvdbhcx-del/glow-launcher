@@ -1352,6 +1352,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         return mGlowLibrary != null && mGlowLibraryVisible && !isSearching();
     }
 
+    // Glow: swipe right on the side App Library to go back to the home screen
+    @Nullable private app.lawnchair.allapps.GlowSideLibrary.SwipeBack mGlowSwipeBack;
+
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         // The AllAppsContainerView houses the QSB and is hence visible from the Workspace
@@ -1359,6 +1362,16 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         if (!isInAllApps()) {
             mTouchHandler = null;
             return false;
+        }
+        if (mActivityContext instanceof com.android.launcher3.Launcher glowLauncher
+                && app.lawnchair.allapps.GlowSideLibrary.isEnabled(glowLauncher)) {
+            if (mGlowSwipeBack == null) {
+                mGlowSwipeBack = new app.lawnchair.allapps.GlowSideLibrary.SwipeBack(glowLauncher);
+            }
+            if (mGlowSwipeBack.onInterceptTouchEvent(this, ev)) {
+                mTouchHandler = null;
+                return true;
+            }
         }
 
         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
@@ -1378,6 +1391,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
+        if (mGlowSwipeBack != null && mGlowSwipeBack.isDragging()) {
+            return mGlowSwipeBack.onTouchEvent(this, ev);
+        }
         if (!isInAllApps()) {
             return false;
         }
