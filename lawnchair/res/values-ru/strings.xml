@@ -98,4 +98,14 @@
     <string name="glow_gesture_no_flashlight">На этом устройстве нет фонарика</string>
     <string name="glow_gesture_screenshot_a11y_hint">делать снимки экрана</string>
     <string name="glow_library_categories">Категории</string>
+    <string name="glow_update_check">Проверить обновления</string>
+    <string name="glow_update_checking">Проверяю обновления…</string>
+    <string name="glow_update_latest">У вас последняя версия Glow</string>
+    <string name="glow_update_failed">Не удалось обновить Glow. Проверьте интернет и попробуйте ещё раз.</string>
+    <string name="glow_update_available">Доступна Glow %1$s</string>
+    <string name="glow_update_message">Обновление установится поверх текущей версии. Рабочий стол и настройки сохранятся.</string>
+    <string name="glow_update_install">Обновить</string>
+    <string name="glow_update_later">Позже</string>
+    <string name="glow_update_downloading">Скачиваю обновление…</string>
+    <string name="glow_update_allow_install">Разрешите Glow устанавливать приложения и нажмите «Обновить» ещё раз</string>
 </resources>

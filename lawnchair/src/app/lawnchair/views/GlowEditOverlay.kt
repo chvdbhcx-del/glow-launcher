@@ -142,6 +142,9 @@ class GlowEditOverlay @JvmOverloads constructor(
             Triple(R.string.glow_themes, R.drawable.ic_palette) {
                 launcher.startActivity(Intent(launcher, GlowThemesActivity::class.java))
             },
+            Triple(R.string.glow_update_check, R.drawable.ic_glow_update) {
+                app.lawnchair.update.GlowUpdater.checkNow(launcher)
+            },
             Triple(R.string.glow_launcher_settings, R.drawable.ic_setting) {
                 launcher.startActivity(PreferenceActivity.createIntent(launcher, Root))
             },

@@ -160,6 +160,8 @@ android {
         buildConfigField "String", "VERSION_DISPLAY_NAME", "\"${versionDisplayName}\""
         buildConfigField "String", "MAJOR_VERSION", "\"${majorVersion}\""
         buildConfigField "String", "COMMIT_HASH", "\"${buildCommit}\""
+        // Glow: release tag of this build (e.g. v1.0.0-test15), used by the in-app updater
+        buildConfigField "String", "GLOW_RELEASE_TAG", "\"${System.getenv("RELEASE_TAG") ?: ""}\""
         buildConfigField "boolean", "ENABLE_AUTO_INSTALLS_LAYOUT", "false"
 
         manifestPlaceholders.quickstepMinSdk = quickstepMinSdk
