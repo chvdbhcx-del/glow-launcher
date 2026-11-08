@@ -44,6 +44,7 @@ class GlowAppLockActivity : Activity() {
     private val target: Intent? by lazy { intentExtra(EXTRA_TARGET) }
     private val lockedUser: UserHandle? by lazy { parcelableExtra(EXTRA_USER) }
     private val packageNameToOpen: String? by lazy { intent.getStringExtra(EXTRA_PACKAGE) }
+    private val shortcutId: String? by lazy { intent.getStringExtra(EXTRA_SHORTCUT) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,7 +66,7 @@ class GlowAppLockActivity : Activity() {
                 val prompt = BiometricPrompt.Builder(this)
                     .setTitle(title)
                     .setAllowedAuthenticators(
-                        BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                        BiometricManager.Authenticators.BIOMETRIC_STRONG or
                             BiometricManager.Authenticators.DEVICE_CREDENTIAL,
                     )
                     .build()
@@ -126,7 +127,17 @@ class GlowAppLockActivity : Activity() {
         GlowAppLock.markUnlocked(this, packageNameToOpen!!, lockedUser)
         try {
             val targetUser = lockedUser
-            if (targetUser == null || targetUser == Process.myUserHandle()) {
+            val shortcut = shortcutId
+            if (shortcut != null) {
+                // App shortcuts can only be started through LauncherApps
+                getSystemService(LauncherApps::class.java).startShortcut(
+                    packageNameToOpen!!,
+                    shortcut,
+                    null,
+                    null,
+                    targetUser ?: Process.myUserHandle(),
+                )
+            } else if (targetUser == null || targetUser == Process.myUserHandle()) {
                 startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             } else {
                 getSystemService(LauncherApps::class.java)
@@ -135,6 +146,9 @@ class GlowAppLockActivity : Activity() {
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(this, R.string.activity_not_found, Toast.LENGTH_SHORT).show()
         } catch (e: SecurityException) {
+            Toast.makeText(this, R.string.activity_not_found, Toast.LENGTH_SHORT).show()
+        } catch (e: IllegalStateException) {
+            // Shortcut disabled or the work profile is paused
             Toast.makeText(this, R.string.activity_not_found, Toast.LENGTH_SHORT).show()
         }
         finish()
@@ -165,13 +179,21 @@ class GlowAppLockActivity : Activity() {
         private const val EXTRA_TARGET = "glow.extra.TARGET"
         private const val EXTRA_USER = "glow.extra.USER"
         private const val EXTRA_PACKAGE = "glow.extra.PACKAGE"
+        private const val EXTRA_SHORTCUT = "glow.extra.SHORTCUT"
         private const val REQUEST_CONFIRM = 1
 
-        fun createIntent(context: Context, target: Intent, user: UserHandle?, packageName: String): Intent =
+        fun createIntent(
+            context: Context,
+            target: Intent,
+            user: UserHandle?,
+            packageName: String,
+            shortcutId: String? = null,
+        ): Intent =
             Intent(context, GlowAppLockActivity::class.java)
                 .putExtra(EXTRA_TARGET, Intent(target).apply { sourceBounds = null } as Parcelable)
                 .putExtra(EXTRA_USER, user as Parcelable?)
                 .putExtra(EXTRA_PACKAGE, packageName)
+                .putExtra(EXTRA_SHORTCUT, shortcutId)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
     }
 }

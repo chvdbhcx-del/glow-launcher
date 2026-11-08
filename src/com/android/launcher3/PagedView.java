@@ -1106,6 +1106,8 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
                 mDownMotionX = x;
                 mDownMotionY = y;
                 mDownMotionPrimary = mOrientationHandler.getPrimaryDirection(ev, 0);
+                // Glow: the App Library pull only counts when the swipe starts on the last page
+                mGlowDownOnLastPage = getNextPage() == getPageCount() - 1;
                 mLastMotion = (int) mDownMotionPrimary;
                 mTotalMotion = 0;
                 mAllowEasyFling = false;
@@ -1509,7 +1511,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
                 // Glow: a firm pull past the last page (iOS App Library gesture)
                 float endPull = layoutDir == LAYOUT_DIRECTION_LTR
                         ? mEdgeGlowRight.getDistance() : mEdgeGlowLeft.getDistance();
-                if (endPull > 0.06f) {
+                if (endPull > 0.06f && mGlowDownOnLastPage) {
                     onPulledPastLastPage();
                 }
             }
@@ -1560,6 +1562,8 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
         float threshold = mAllowEasyFling ? mEasyFlingThresholdVelocity : mFlingThresholdVelocity;
         return Math.abs(velocity) > threshold;
     }
+
+    private boolean mGlowDownOnLastPage;
 
     /** Glow: called when the user pulls past the last page and lets go. */
     protected void onPulledPastLastPage() { }

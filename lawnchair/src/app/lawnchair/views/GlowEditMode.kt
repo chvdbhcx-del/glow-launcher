@@ -28,7 +28,9 @@ import android.net.Uri
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.view.accessibility.AccessibilityManager
 import android.view.animation.LinearInterpolator
+import androidx.core.view.ViewCompat
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.CellLayout
 import com.android.launcher3.Launcher
@@ -43,6 +45,7 @@ import com.android.launcher3.model.data.LauncherAppWidgetInfo
 import com.android.launcher3.model.data.WorkspaceItemInfo
 import com.android.launcher3.widget.LauncherAppWidgetHostView
 import java.lang.ref.WeakReference
+import java.util.WeakHashMap
 import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -86,6 +89,9 @@ object GlowEditMode {
     private val tmpPoint = FloatArray(2)
     private val tmpMatrix = Matrix()
 
+    /** TalkBack "Remove" actions added to home screen items while editing. */
+    private val removeActions = WeakHashMap<View, Int>()
+
     // ---------------------------------------------------------------------------------------
     // State
     // ---------------------------------------------------------------------------------------
@@ -97,20 +103,31 @@ object GlowEditMode {
 
     /** Called by [GlowEditOverlay] when the launcher enters or leaves edit mode. */
     fun setActive(launcher: Launcher, active: Boolean) {
+        if (launcherRef?.get() !== launcher) {
+            // A new launcher instance (recreated after a theme or grid change): drop the old one
+            jiggle?.cancel()
+            jiggle = null
+        }
         launcherRef = WeakReference(launcher)
         animateBadges(launcher, if (active) 1f else 0f)
         if (active) {
-            if (jiggle?.isRunning == true) return
+            updateRemoveActions(launcher, true)
+            if (jiggle?.isRunning == true || !shouldJiggle(launcher)) return
+            val ref = WeakReference(launcher)
             jiggle = ValueAnimator.ofFloat(0f, 1f).apply {
                 duration = 1000
                 repeatCount = ValueAnimator.INFINITE
                 interpolator = LinearInterpolator()
-                addUpdateListener { applyJiggle(launcher, it.currentPlayTime) }
+                addUpdateListener {
+                    val l = ref.get()
+                    if (l == null || l.isDestroyed) it.cancel() else applyJiggle(l, it.currentPlayTime)
+                }
                 start()
             }
         } else {
             jiggle?.cancel()
             jiggle = null
+            updateRemoveActions(launcher, false)
             forEachContainer(launcher) { container ->
                 for (i in 0 until container.childCount) {
                     container.getChildAt(i).rotation = 0f
@@ -119,13 +136,58 @@ object GlowEditMode {
         }
     }
 
+    /** Called when the launcher is destroyed, so nothing keeps it alive. */
+    @JvmStatic
+    fun onLauncherDestroyed(launcher: Launcher) {
+        if (launcherRef?.get() !== launcher) return
+        jiggle?.cancel()
+        jiggle = null
+        badgeAnim?.cancel()
+        badgeAnim = null
+        badgeProgress = 0f
+        removeActions.clear()
+        launcherRef = null
+        pressedView = null
+        pressedContainer = null
+    }
+
+    /**
+     * No wiggle when animations are off in the system settings ("Remove animations")
+     * or TalkBack is on: the "−" badges alone mark the edit mode.
+     */
+    private fun shouldJiggle(launcher: Launcher): Boolean {
+        if (!GlowGlass.animationsEnabled()) return false
+        val am = launcher.getSystemService(AccessibilityManager::class.java)
+        return am?.isTouchExplorationEnabled != true
+    }
+
+    private fun updateRemoveActions(launcher: Launcher, add: Boolean) {
+        removeActions.forEach { (view, id) -> ViewCompat.removeAccessibilityAction(view, id) }
+        removeActions.clear()
+        if (!add) return
+        forEachContainer(launcher) { container ->
+            for (i in 0 until container.childCount) {
+                val child = container.getChildAt(i)
+                if (!hasBadge(container, child)) continue
+                val title = (child.tag as? ItemInfo)?.title?.toString().orEmpty()
+                val label = launcher.getString(R.string.glow_remove_badge, title)
+                val id = ViewCompat.addAccessibilityAction(child, label) { view, _ ->
+                    confirmRemove(launcher, view)
+                    true
+                }
+                if (id != View.NO_ID) removeActions[child] = id
+            }
+        }
+    }
+
     private fun animateBadges(launcher: Launcher, target: Float) {
         badgeAnim?.cancel()
         badgeAnim = ValueAnimator.ofFloat(badgeProgress, target).apply {
             duration = BADGE_FADE_MS
+            val ref = WeakReference(launcher)
             addUpdateListener {
                 badgeProgress = it.animatedValue as Float
-                forEachContainer(launcher) { c -> c.invalidate() }
+                ref.get()?.let { l -> forEachContainer(l) { c -> c.invalidate() } }
             }
             start()
         }
@@ -134,7 +196,9 @@ object GlowEditMode {
     private fun applyJiggle(launcher: Launcher, playTime: Long) {
         val phase = (playTime % PERIOD_MS.toLong()) / PERIOD_MS * 2f * PI.toFloat()
         var index = 0
-        forEachContainer(launcher) { container ->
+        // Only the page on screen and its neighbours move; the rest is not visible anyway.
+        val current = launcher.workspace?.nextPage ?: 0
+        forEachContainer(launcher, current - 1..current + 1) { container ->
             for (i in 0 until container.childCount) {
                 val child = container.getChildAt(i)
                 val amplitude =
@@ -145,16 +209,19 @@ object GlowEditMode {
                 child.rotation = amplitude * sin(phase + offset)
                 index++
             }
+            // The "−" badges are drawn by the container and follow each child's rotation
             container.invalidate()
         }
     }
 
     private inline fun forEachContainer(
         launcher: Launcher,
+        pages: IntRange? = null,
         block: (ShortcutAndWidgetContainer) -> Unit,
     ) {
         val workspace = launcher.workspace ?: return
         for (i in 0 until workspace.childCount) {
+            if (pages != null && i !in pages) continue
             val page = workspace.getChildAt(i) as? CellLayout ?: continue
             block(page.shortcutsAndWidgets)
         }

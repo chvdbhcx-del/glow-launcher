@@ -16,6 +16,7 @@
 
 package app.lawnchair.allapps
 
+import android.animation.Animator
 import android.animation.ObjectAnimator
 import android.view.MotionEvent
 import android.view.VelocityTracker
@@ -40,11 +41,15 @@ object GlowSideLibrary {
         return !dp.shouldShowAllAppsOnSheet() && !dp.isVerticalBarLayout
     }
 
+    /** +1 when the library sits to the right of the home screen, -1 in right-to-left layouts. */
+    private fun direction(view: View): Int =
+        if (view.layoutDirection == View.LAYOUT_DIRECTION_RTL) -1 else 1
+
     @JvmStatic
     fun applyProgress(launcher: Launcher, progress: Float) {
         val appsView = launcher.appsView ?: return
         val width = launcher.dragLayer?.width?.takeIf { it > 0 } ?: appsView.width
-        appsView.translationX = progress.coerceIn(0f, 1f) * width
+        appsView.translationX = direction(appsView) * progress.coerceIn(0f, 1f) * width
     }
 
     @JvmStatic
@@ -61,6 +66,7 @@ object GlowSideLibrary {
         private var downY = 0f
         private var dragging = false
         private var tracker: VelocityTracker? = null
+        private var settle: Animator? = null
 
         fun isDragging() = dragging
 
@@ -75,7 +81,7 @@ object GlowSideLibrary {
                 }
                 MotionEvent.ACTION_MOVE -> {
                     tracker?.addMovement(ev)
-                    val dx = ev.x - downX
+                    val dx = (ev.x - downX) * direction(view)
                     val dy = ev.y - downY
                     if (!dragging && dx > slop * 2 && dx > abs(dy) * 1.6f &&
                         launcher.isInState(LauncherState.ALL_APPS)
@@ -100,14 +106,16 @@ object GlowSideLibrary {
             tracker?.addMovement(ev)
             when (ev.actionMasked) {
                 MotionEvent.ACTION_MOVE -> {
-                    controller.setProgress(((ev.x - downX) / width).coerceIn(0f, 1f))
+                    controller.setProgress(((ev.x - downX) * direction(view) / width).coerceIn(0f, 1f))
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     dragging = false
-                    val vx = tracker?.let {
-                        it.computeCurrentVelocity(1000)
-                        it.xVelocity
-                    } ?: 0f
+                    val vx = direction(view) * (
+                        tracker?.let {
+                            it.computeCurrentVelocity(1000)
+                            it.xVelocity
+                        } ?: 0f
+                        )
                     tracker?.recycle()
                     tracker = null
                     val progress = controller.progress
@@ -116,10 +124,26 @@ object GlowSideLibrary {
                     if (close) {
                         launcher.stateManager.goToState(LauncherState.NORMAL)
                     } else {
-                        ObjectAnimator.ofFloat(controller, AllAppsTransitionController.ALL_APPS_PROGRESS, 0f)
+                        settle?.cancel()
+                        settle = ObjectAnimator.ofFloat(controller, AllAppsTransitionController.ALL_APPS_PROGRESS, 0f)
                             .setDuration(200)
                             .apply { interpolator = DecelerateInterpolator() }
-                            .start()
+                            .also { anim ->
+                                // Any state change (Home pressed, back gesture) takes over from the snap-back
+                                val listener = object : com.android.launcher3.statemanager.StateManager.StateListener<LauncherState> {
+                                    override fun onStateTransitionStart(toState: LauncherState) {
+                                        anim.cancel()
+                                    }
+                                }
+                                launcher.stateManager.addStateListener(listener)
+                                anim.addListener(object : android.animation.AnimatorListenerAdapter() {
+                                    override fun onAnimationEnd(animation: Animator) {
+                                        launcher.stateManager.removeStateListener(listener)
+                                        if (settle === animation) settle = null
+                                    }
+                                })
+                                anim.start()
+                            }
                     }
                 }
             }

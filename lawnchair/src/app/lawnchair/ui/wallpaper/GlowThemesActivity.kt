@@ -188,11 +188,14 @@ class GlowThemesActivity : Activity() {
                     )
                 }
             }.isSuccess
-            runOnUiThread {
-                if (ok) {
+            if (ok) {
+                // Written here on the background thread: setBlocking waits for the disk
+                runCatching {
                     PreferenceManager2.getInstance(appContext).accentColor
                         .setBlocking(ColorOption.CustomColor(theme.accent))
                 }
+            }
+            runOnUiThread {
                 Toast.makeText(
                     appContext,
                     if (ok) R.string.glow_theme_applied else R.string.glow_wallpaper_failed,

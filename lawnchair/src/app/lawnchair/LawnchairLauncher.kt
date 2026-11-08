@@ -500,6 +500,9 @@ class LawnchairLauncher : QuickstepLauncher() {
     }
 
     override fun onDestroy() {
+        // Glow: drop the edit mode and folder backdrop state tied to this instance
+        app.lawnchair.views.GlowEditMode.onLauncherDestroyed(this)
+        app.lawnchair.views.GlowFolderBackdrop.onLauncherDestroyed(this)
         super.onDestroy()
         // Only actually closes if required, safe to call if not enabled
         SmartspacerClient.close()

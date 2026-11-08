@@ -47,7 +47,7 @@
     <string name="glow_library_social">Общение</string>
     <string name="glow_library_entertainment">Развлечения</string>
     <string name="glow_library_creativity">Творчество</string>
-    <string name="glow_library_productivity">Работа и финансы</string>
+    <string name="glow_library_productivity">Работа</string>
     <string name="glow_library_utilities">Утилиты</string>
     <string name="glow_library_reading">Информация и чтение</string>
     <string name="glow_library_shopping">Покупки и еда</string>
@@ -108,4 +108,17 @@
     <string name="glow_update_later">Позже</string>
     <string name="glow_update_downloading">Скачиваю обновление…</string>
     <string name="glow_update_allow_install">Разрешите Glow устанавливать приложения и нажмите «Обновить» ещё раз</string>
+    <string name="glow_update_unsupported">Эта сборка Glow не обновляется сама</string>
+    <string name="glow_update_never_auto">Не проверять автоматически</string>
+    <string name="glow_update_auto_off">Автопроверка обновлений выключена. Проверить можно в меню «Изменить».</string>
+    <string name="glow_update_auto_on">Проверять автоматически</string>
+    <string name="glow_update_rejected">Скачанное обновление не прошло проверку безопасности и не установлено</string>
+    <string name="glow_library_finance">Финансы</string>
+    <string name="glow_library_all_apps_description">Все приложения по алфавиту</string>
+    <string name="glow_library_open_named">%1$s, приложений: %2$d</string>
+    <string name="glow_library_more_apps">Открыть «%1$s»: ещё %2$d</string>
+    <string name="glow_library_private_space">Личное пространство</string>
+    <string name="glow_close">Закрыть</string>
+    <string name="glow_grid_changed">Сетка изменена на %1$d × %2$d</string>
+    <string name="glow_app_lock_inactive">Блокировка не работает: на устройстве нет блокировки экрана</string>
 </resources>

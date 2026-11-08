@@ -1124,7 +1124,7 @@
     <string name="glow_library_social">Social</string>
     <string name="glow_library_entertainment">Entertainment</string>
     <string name="glow_library_creativity">Creativity</string>
-    <string name="glow_library_productivity">Productivity &amp; Finance</string>
+    <string name="glow_library_productivity">Productivity</string>
     <string name="glow_library_utilities">Utilities</string>
     <string name="glow_library_reading">Information &amp; Reading</string>
     <string name="glow_library_shopping">Shopping &amp; Food</string>
@@ -1185,4 +1185,17 @@
     <string name="glow_update_later">Later</string>
     <string name="glow_update_downloading">Downloading update…</string>
     <string name="glow_update_allow_install">Allow Glow to install apps, then tap Update again</string>
+    <string name="glow_update_unsupported">This build of Glow doesn\'t update itself</string>
+    <string name="glow_update_never_auto">Don\'t check automatically</string>
+    <string name="glow_update_auto_off">Automatic update checks are off. Use Check for Updates in the Edit menu.</string>
+    <string name="glow_update_auto_on">Check automatically</string>
+    <string name="glow_update_rejected">The downloaded update failed the security check and was not installed</string>
+    <string name="glow_library_finance">Finance</string>
+    <string name="glow_library_all_apps_description">All apps, A to Z</string>
+    <string name="glow_library_open_named">%1$s, %2$d apps</string>
+    <string name="glow_library_more_apps">Open %1$s: %2$d more apps</string>
+    <string name="glow_library_private_space">Private Space</string>
+    <string name="glow_close">Close</string>
+    <string name="glow_grid_changed">Grid changed to %1$d × %2$d</string>
+    <string name="glow_app_lock_inactive">App lock is off: there is no screen lock on this device</string>
 </resources>

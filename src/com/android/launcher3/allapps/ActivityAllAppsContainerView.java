@@ -1320,12 +1320,15 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             return;
         }
         mGlowLibrary = new app.lawnchair.allapps.GlowAppLibraryView(getContext());
+        // Glow: personal and work profile apps; Private Space keeps its own locked section
         mGlowLibrary.setAppsProvider(() -> app.lawnchair.allapps.GlowAppLibraryView.visibleApps(
-                getContext(), mAllAppsStore.getApps()));
+                getContext(), mAllAppsStore.getApps(),
+                mPrivateProfileManager != null ? mPrivateProfileManager.getItemInfoMatcher() : null));
         mGlowLibrary.setOnShowAllApps(() -> {
             setGlowLibraryVisible(false);
             return kotlin.Unit.INSTANCE;
         });
+        mGlowLibrary.setHasPrivateSpace(() -> mHasPrivateApps);
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
         int index = indexOfChild(getAppsRecyclerViewContainer());

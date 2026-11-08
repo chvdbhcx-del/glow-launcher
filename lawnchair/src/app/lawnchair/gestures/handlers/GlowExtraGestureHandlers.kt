@@ -31,6 +31,11 @@ import com.android.launcher3.R
 /** Glow: turns the flashlight on or off. */
 class FlashlightGestureHandler(context: Context) : GestureHandler(context) {
 
+    init {
+        // Track the torch from the start, so the first gesture knows if it is already on
+        runCatching { context.getSystemService(CameraManager::class.java)?.let { TorchState.register(it) } }
+    }
+
     override suspend fun onTrigger(launcher: LawnchairLauncher) {
         val manager = launcher.getSystemService(CameraManager::class.java) ?: return
         val cameraId = runCatching {

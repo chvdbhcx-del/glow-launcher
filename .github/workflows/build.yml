@@ -1,5 +1,8 @@
 name: Build APK
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ main ]
@@ -29,6 +32,21 @@ jobs:
         with:
           name: glow-launcher-debug
           path: build/outputs/apk/**/*.apk
+
+  # Unit tests of the Glow logic (updater rules, App Library categories)
+  glow-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Run Glow unit tests
+        run: ./gradlew testLawnWithQuickstepGithubDebugUnitTest --tests 'app.lawnchair.glow.*'
 
   # Checks that the minified release variant builds (signed with the debug key here;
   # real signed releases come from release.yml).

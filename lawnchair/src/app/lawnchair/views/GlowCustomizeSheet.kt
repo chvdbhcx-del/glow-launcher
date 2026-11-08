@@ -127,12 +127,14 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
                 gravity = Gravity.CENTER
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
+                isFocusable = true
                 setOnClickListener { selectTab(index) }
+                GlowGlass.asButton(this)
             }
             tabs += tab
-            tabRow.addView(tab, LinearLayout.LayoutParams(0, dp(32), 1f))
+            tabRow.addView(tab, LinearLayout.LayoutParams(0, dp(42), 1f))
         }
-        root.addView(tabRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)))
+        root.addView(tabRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
         root.addView(
             content,
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(SHEET_CONTENT_HEIGHT))
@@ -163,6 +165,7 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
 
     private fun selectTab(index: Int) {
         tabs.forEachIndexed { i, tab ->
+            tab.isSelected = i == index
             tab.background = if (i == index) {
                 GradientDrawable().apply {
                     cornerRadius = dp(10).toFloat()
@@ -283,18 +286,35 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
                 markSelected(options, option)
                 // The launcher rebuilds its grid, so close the sheet first.
                 dialog.dismiss()
-                prefs.batchEdit {
-                    prefs.workspaceColumns.set(cols)
-                    prefs.workspaceRows.set(rows)
-                }
-                MAIN_EXECUTOR.handler.post {
-                    InvariantDeviceProfile.INSTANCE.get(launcher).onPreferencesChanged(launcher)
-                }
+                val oldCols = prefs.workspaceColumns.get()
+                val oldRows = prefs.workspaceRows.get()
+                applyGrid(cols, rows)
+                // A smaller grid moves icons around: offer to go back for a few seconds
+                MAIN_EXECUTOR.handler.postDelayed({
+                    val activity = Launcher.getLauncher(launcher)
+                    if (activity.isDestroyed) return@postDelayed
+                    com.android.launcher3.views.Snackbar.show(
+                        activity,
+                        activity.getString(R.string.glow_grid_changed, cols, rows),
+                        R.string.undo,
+                        null,
+                    ) { applyGrid(oldCols, oldRows) }
+                }, 600)
             }
             options += option
             row.addView(option)
         }
         return scroller(row)
+    }
+
+    private fun applyGrid(cols: Int, rows: Int) {
+        prefs.batchEdit {
+            prefs.workspaceColumns.set(cols)
+            prefs.workspaceRows.set(rows)
+        }
+        MAIN_EXECUTOR.handler.post {
+            InvariantDeviceProfile.INSTANCE.get(launcher).onPreferencesChanged(launcher)
+        }
     }
 
     private fun indicatorPage(): View {

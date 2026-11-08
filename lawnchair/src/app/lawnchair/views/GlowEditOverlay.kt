@@ -79,9 +79,9 @@ class GlowEditOverlay @JvmOverloads constructor(
         editButton = createPill(R.string.glow_edit) { showMenu() }
         addView(
             editButton,
-            LayoutParams(LayoutParams.WRAP_CONTENT, dp(PILL_HEIGHT), Gravity.TOP or Gravity.START)
+            LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START)
                 .apply {
-                    topMargin = dp(6)
+                    topMargin = dp(6) - touchInset()
                     marginStart = dp(18)
                 },
         )
@@ -90,28 +90,23 @@ class GlowEditOverlay @JvmOverloads constructor(
         }
         addView(
             doneButton,
-            LayoutParams(LayoutParams.WRAP_CONTENT, dp(PILL_HEIGHT), Gravity.TOP or Gravity.END)
+            LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END)
                 .apply {
-                    topMargin = dp(6)
+                    topMargin = dp(6) - touchInset()
                     marginEnd = dp(18)
                 },
         )
     }
 
-    private fun createPill(@StringRes label: Int, onClick: (View) -> Unit) = TextView(context).apply {
-        setText(label)
-        setTextColor(Color.WHITE)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        gravity = Gravity.CENTER
-        includeFontPadding = false
-        setPadding(dp(16), 0, dp(16), 0)
-        minWidth = dp(72)
-        background = glassBackground(dp(PILL_HEIGHT) / 2f, fillAlpha = 70)
-        isClickable = true
-        isFocusable = true
-        setOnClickListener(onClick)
-    }
+    /** Glass pill, 34dp tall to the eye, with a 48dp touch area and a button role for TalkBack. */
+    private fun createPill(@StringRes label: Int, onClick: (View) -> Unit) =
+        GlowGlass.pill(context, context.getString(label), PILL_HEIGHT, textSp = 16f, bold = false).apply {
+            minWidth = dp(72)
+            setOnClickListener(onClick)
+        }
+
+    /** Space between the visible pill and the edge of its 48dp touch area. */
+    private fun touchInset(): Int = ((dp(GlowGlass.MIN_TOUCH_DP) - dp(PILL_HEIGHT)) / 2).coerceAtLeast(0)
 
     // ---------------------------------------------------------------------------------------
     // "Edit" menu
@@ -149,6 +144,8 @@ class GlowEditOverlay @JvmOverloads constructor(
                 launcher.startActivity(PreferenceActivity.createIntent(launcher, Root))
             },
         )
+            // Play and local builds don't update themselves
+            .filter { it.first != R.string.glow_update_check || app.lawnchair.update.GlowUpdater.isSupported() }
         val dialog = Dialog(launcher)
         items.forEachIndexed { index, (label, icon, action) ->
             if (index > 0) {
@@ -175,12 +172,14 @@ class GlowEditOverlay @JvmOverloads constructor(
         dialog.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             setLayout(dp(250), WindowManager.LayoutParams.WRAP_CONTENT)
-            setGravity(Gravity.TOP or Gravity.START)
+            // LEFT, not START: window x offsets are always measured from the left edge
+            setGravity(Gravity.TOP or Gravity.LEFT)
             val loc = IntArray(2)
             editButton.getLocationOnScreen(loc)
+            val rtl = layoutDirection == LAYOUT_DIRECTION_RTL
             attributes = attributes.apply {
-                x = loc[0]
-                y = loc[1] + editButton.height + dp(8)
+                x = if (rtl) loc[0] + editButton.width - dp(250) else loc[0]
+                y = loc[1] + editButton.height - touchInset() + dp(8)
                 dimAmount = 0.12f
                 windowAnimations = android.R.style.Animation_Dialog
             }
@@ -205,6 +204,7 @@ class GlowEditOverlay @JvmOverloads constructor(
             foreground = ta.getDrawable(0)
             ta.recycle()
             setOnClickListener { onClick() }
+            GlowGlass.asButton(this)
             addView(
                 TextView(context).apply {
                     setText(label)

@@ -17,8 +17,11 @@
 package app.lawnchair.applock
 
 import android.app.KeyguardManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Process
 import android.os.SystemClock
 import android.os.UserHandle
@@ -27,14 +30,19 @@ import android.view.View
 import android.widget.Toast
 import app.lawnchair.LawnchairLauncher
 import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPLICATION
+import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_DEEP_SHORTCUT
 import com.android.launcher3.R
 import com.android.launcher3.model.data.ItemInfo
 import com.android.launcher3.popup.SystemShortcut
 
 /**
  * Glow app lock: apps the user locks need the device's biometrics or screen
- * lock before they open from the launcher. Locked apps are stored as
- * "package#serial" in a private preferences file.
+ * lock before they open from the launcher (app icons and their shortcuts).
+ * Locked apps are stored as "package#serial" in a private preferences file.
+ *
+ * This guards launches made through Glow only. Notifications, recents and other
+ * apps can still open a locked app, so the UI presents it as protection from
+ * casual access; Android's Private Space is the place for real isolation.
  */
 object GlowAppLock {
 
@@ -46,6 +54,27 @@ object GlowAppLock {
 
     private var lastUnlockedKey: String? = null
     private var lastUnlockedAt = 0L
+    private var screenOffRegistered = false
+
+    /** Turning the screen off ends the short grace period right away. */
+    private fun watchScreenOff(context: Context) {
+        if (screenOffRegistered) return
+        screenOffRegistered = true
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) {
+                lastUnlockedKey = null
+                lastUnlockedAt = 0L
+            }
+        }
+        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.applicationContext.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                context.applicationContext.registerReceiver(receiver, filter)
+            }
+        }
+    }
 
     private fun key(context: Context, packageName: String, user: UserHandle?): String {
         val serial = context.getSystemService(UserManager::class.java)
@@ -64,7 +93,9 @@ object GlowAppLock {
 
     fun setLocked(context: Context, packageName: String, user: UserHandle?, locked: Boolean) {
         val k = key(context, packageName, user)
-        val updated = lockedSet(context).toMutableSet().apply { if (locked) add(k) else remove(k) }
+        val updated = lockedSet(context).toMutableSet().apply {
+            if (locked) add(k) else remove(k)
+        }
         prefs(context).edit().putStringSet(KEY_LOCKED, updated).apply()
     }
 
@@ -83,16 +114,27 @@ object GlowAppLock {
      */
     @JvmStatic
     fun interceptLaunch(context: Context, intent: Intent, item: ItemInfo?): Boolean {
-        if (item == null || item.itemType != ITEM_TYPE_APPLICATION) return false
-        val packageName = intent.component?.packageName ?: intent.`package` ?: return false
+        if (item == null) return false
+        if (item.itemType != ITEM_TYPE_APPLICATION && item.itemType != ITEM_TYPE_DEEP_SHORTCUT) return false
+        val packageName = item.targetPackage ?: intent.component?.packageName ?: intent.`package` ?: return false
         if (packageName == context.packageName) return false
         if (!isLocked(context, packageName, item.user)) return false
-        if (!canLock(context)) return false
+        if (!canLock(context)) {
+            // The screen lock was removed: say why the app opens without asking
+            Toast.makeText(context, R.string.glow_app_lock_inactive, Toast.LENGTH_SHORT).show()
+            return false
+        }
+        watchScreenOff(context)
         val k = key(context, packageName, item.user)
         if (k == lastUnlockedKey && SystemClock.elapsedRealtime() - lastUnlockedAt < GRACE_MS) {
             return false
         }
-        context.startActivity(GlowAppLockActivity.createIntent(context, intent, item.user, packageName))
+        val shortcutId = if (item.itemType == ITEM_TYPE_DEEP_SHORTCUT) {
+            (item as? com.android.launcher3.model.data.WorkspaceItemInfo)?.deepShortcutId
+        } else {
+            null
+        }
+        context.startActivity(GlowAppLockActivity.createIntent(context, intent, item.user, packageName, shortcutId))
         return true
     }
 
@@ -107,8 +149,20 @@ object GlowAppLock {
 
     val SHARE = SystemShortcut.Factory { activity: LawnchairLauncher, itemInfo: ItemInfo, view: View ->
         val pkg = packageOf(itemInfo) ?: return@Factory null
+        // A Play Store link only makes sense for apps that came from the Play Store
+        if (!isFromPlayStore(activity, pkg)) return@Factory null
         Share(activity, itemInfo, view, pkg)
     }
+
+    private fun isFromPlayStore(context: Context, pkg: String): Boolean = runCatching {
+        val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            context.packageManager.getInstallSourceInfo(pkg).installingPackageName
+        } else {
+            @Suppress("DEPRECATION")
+            context.packageManager.getInstallerPackageName(pkg)
+        }
+        installer == "com.android.vending"
+    }.getOrDefault(false)
 
     class ToggleLock(
         private val launcher: LawnchairLauncher,

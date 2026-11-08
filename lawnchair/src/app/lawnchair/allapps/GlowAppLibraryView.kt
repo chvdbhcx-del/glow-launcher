@@ -23,148 +23,191 @@ import android.graphics.Color
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
-import android.os.Process
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import app.lawnchair.flowerpot.Flowerpot
 import app.lawnchair.preferences2.PreferenceManager2
 import app.lawnchair.preferences2.firstCached
+import app.lawnchair.views.GlowGlass
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.Launcher
 import com.android.launcher3.R
 import com.android.launcher3.model.data.AppInfo
+import com.android.launcher3.model.data.ItemInfo
 import com.android.launcher3.util.Executors.MAIN_EXECUTOR
-import com.android.launcher3.util.Executors.MODEL_EXECUTOR
+import com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Predicate
 
 /**
  * Glow "App Library" (iOS style): the app drawer shows automatic categories as glass tiles.
  * Each tile shows three apps that open with one tap plus a mini grid that opens the whole
- * category, like a folder. Search stays on top; "A–Z" switches to the classic list.
+ * category, like a folder. Search stays on top; "A–Z" switches to an alphabetical list.
+ *
+ * Everything scrollable is a [RecyclerView], so only the rows on screen exist as views.
+ * Categories are computed off the main and model threads, cached per package and
+ * rebuilt at most once per burst of app changes.
  */
 class GlowAppLibraryView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : FrameLayout(context, attrs) {
 
-    private data class Category(val label: String, val apps: List<AppInfo>)
+    private data class Category(val key: String, val label: String, val apps: List<AppInfo>)
 
     private val launcher: Launcher = Launcher.getLauncher(context)
     private val density = resources.displayMetrics.density
 
-    private val scroll = ScrollView(context).apply {
+    private val tilesAdapter = TilesAdapter()
+    private val tilesLayout = GridLayoutManager(context, 2).apply {
+        spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int): Int = if (position == 0) spanCount else 1
+        }
+    }
+    private val tiles = RecyclerView(context).apply {
+        layoutManager = tilesLayout
+        adapter = tilesAdapter
+        itemAnimator = null
         isVerticalScrollBarEnabled = false
         overScrollMode = OVER_SCROLL_NEVER
         clipToPadding = false
-        // Soft edge where tiles slide under the search bar instead of a hard cut
         isVerticalFadingEdgeEnabled = true
-        setFadingEdgeLength((32 * resources.displayMetrics.density).toInt())
+        setFadingEdgeLength(dp(32))
     }
-    private val content = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-    }
+
     private var folderOverlay: View? = null
     private var categories: List<Category> = emptyList()
-    private var builtForWidth = 0
     private var generation = 0
+    private var bottomInset = 0
 
-    /** Supplies the apps to show (already filtered to the personal profile). */
+    /** Supplies the apps to show (personal and work profile, hidden apps removed). */
     var appsProvider: (() -> List<AppInfo>)? = null
 
-    /** Called when the user taps "A–Z" to see the classic alphabetical list. */
+    /** Switches to the classic list, which holds the locked Private Space section. */
     var onShowAllApps: (() -> Unit)? = null
 
+    /** True when a Private Space is set up; the A–Z list then links to it. */
+    var hasPrivateSpace: (() -> Boolean)? = null
+
+    private val rebuildRunnable = Runnable { doRebuild() }
+
     init {
-        scroll.addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        addView(scroll, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(tiles, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         setBottomInset(0)
     }
 
     fun setBottomInset(bottom: Int) {
+        bottomInset = bottom
         val side = dp(SIDE_PADDING_DP)
-        scroll.setPadding(side, dp(4), side, bottom + dp(24))
+        tiles.setPadding(side, dp(4), side, bottom + dp(24))
+        listView?.setPadding(0, 0, 0, bottom + dp(24))
     }
 
     fun canScrollUp(): Boolean = folderOverlay != null ||
-        (listScroll?.canScrollVertically(-1) ?: scroll.canScrollVertically(-1))
+        (listView?.canScrollVertically(-1) ?: tiles.canScrollVertically(-1))
 
     fun scrollToTop() {
-        scroll.scrollTo(0, 0)
-        listScroll?.scrollTo(0, 0)
+        tiles.scrollToPosition(0)
+        listView?.scrollToPosition(0)
     }
 
-    /** Recomputes categories in the background and rebuilds the tiles. */
+    /** Schedules a rebuild; bursts of app updates (installs, icon changes) collapse into one. */
     fun rebuild() {
+        removeCallbacks(rebuildRunnable)
+        if (categories.isEmpty()) post(rebuildRunnable) else postDelayed(rebuildRunnable, REBUILD_DELAY_MS)
+    }
+
+    private fun doRebuild() {
         val apps = appsProvider?.invoke() ?: return
         val gen = ++generation
         val appContext = context.applicationContext
         // Flowerpot's manager must be obtained on the main thread
         val pots = runCatching { Flowerpot.Manager.getInstance(appContext).getAllPots().toList() }
             .getOrDefault(emptyList())
-        MODEL_EXECUTOR.execute {
+        UI_HELPER_EXECUTOR.execute {
             val result = runCatching { categorize(appContext, apps, pots) }.getOrDefault(emptyList())
             MAIN_EXECUTOR.execute {
                 if (gen != generation) return@execute
                 categories = result
-                builtForWidth = 0
-                buildTiles()
+                tilesAdapter.notifyDataSetChanged()
             }
         }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (w != builtForWidth) post { buildTiles() }
+        if (w == oldw) return
+        val cols = GlowCategoryRules.tileColumns(w / density)
+        if (cols != tilesLayout.spanCount) tilesLayout.spanCount = cols
+        post { tilesAdapter.notifyDataSetChanged() }
     }
 
-    private fun buildTiles() {
-        val width = width
-        if (width <= 0) return
-        builtForWidth = width
-        content.removeAllViews()
+    private fun tileSize(): Int {
+        val inner = width - tiles.paddingLeft - tiles.paddingRight
+        val cols = tilesLayout.spanCount
+        return ((inner - dp(TILE_GAP_DP) * (cols - 1)) / cols).coerceAtLeast(0)
+    }
 
-        // "A–Z" pill to switch to the classic alphabetical list
-        content.addView(TextView(context).apply {
-            text = context.getString(R.string.glow_library_all_apps)
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setPadding(dp(14), 0, dp(14), 0)
-            background = glass(dp(16).toFloat())
-            setOnClickListener { openList() }
-        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(32)).apply {
-            gravity = Gravity.END
-            bottomMargin = dp(12)
-        })
+    // ---------------------------------------------------------------------------------------
+    // Tiles
+    // ---------------------------------------------------------------------------------------
 
-        val inner = width - scroll.paddingLeft - scroll.paddingRight
-        val gap = dp(TILE_GAP_DP)
-        val tileSize = (inner - gap) / 2
-        if (tileSize <= 0) return
+    private class Holder(val root: FrameLayout) : RecyclerView.ViewHolder(root)
 
-        categories.chunked(2).forEach { pair ->
-            val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-            pair.forEachIndexed { index, category ->
-                row.addView(createTile(category, tileSize), LinearLayout.LayoutParams(
-                    tileSize, LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { if (index == 1) marginStart = gap })
+    private inner class TilesAdapter : RecyclerView.Adapter<Holder>() {
+        override fun getItemCount(): Int = if (categories.isEmpty()) 0 else categories.size + 1
+        override fun getItemViewType(position: Int): Int = if (position == 0) 0 else 1
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder =
+            Holder(FrameLayout(context).apply {
+                layoutParams = RecyclerView.LayoutParams(
+                    RecyclerView.LayoutParams.MATCH_PARENT,
+                    RecyclerView.LayoutParams.WRAP_CONTENT,
+                )
+            })
+
+        override fun onBindViewHolder(holder: Holder, position: Int) {
+            val root = holder.root
+            root.removeAllViews()
+            if (position == 0) {
+                // "A–Z" pill to switch to the alphabetical list
+                root.addView(
+                    GlowGlass.pill(context, context.getString(R.string.glow_library_all_apps), PILL_HEIGHT_DP).apply {
+                        contentDescription = context.getString(R.string.glow_library_all_apps_description)
+                        setOnClickListener { openList() }
+                    },
+                    LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.END),
+                )
+                root.setPadding(0, 0, 0, dp(4))
+                return
             }
-            content.addView(row, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(14) })
+            val index = position - 1
+            val size = tileSize()
+            if (size <= 0 || index >= categories.size) return
+            val cols = tilesLayout.spanCount
+            val column = index % cols
+            val gap = dp(TILE_GAP_DP)
+            // Distribute the gap so every tile keeps the same size
+            root.setPadding(gap * column / cols, 0, gap - gap * (column + 1) / cols, dp(14))
+            root.addView(
+                createTile(categories[index], size),
+                LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL),
+            )
         }
     }
 
@@ -177,7 +220,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
         val innerGap = dp(10)
         val cell = (tileSize - 2 * pad - innerGap) / 2
         val square = FrameLayout(context).apply {
-            background = glass(dp(26).toFloat())
+            background = GlowGlass.drawable(context, dp(26).toFloat(), GlowGlass.Level.TILE)
             clipChildren = false
         }
         val apps = category.apps
@@ -186,9 +229,13 @@ class GlowAppLibraryView @JvmOverloads constructor(
             square.addView(createBigIcon(apps[i]), cellParams(i, cell, pad, innerGap))
         }
         if (apps.size > 4) {
-            square.addView(createMiniGrid(apps.subList(3, minOf(7, apps.size)), cell) {
-                openCategory(category)
-            }, cellParams(3, cell, pad, innerGap))
+            val rest = apps.size - 3
+            square.addView(
+                createMiniGrid(apps.subList(3, minOf(7, apps.size)), cell, category.label, rest) {
+                    openCategory(category)
+                },
+                cellParams(3, cell, pad, innerGap),
+            )
         }
         column.addView(square, LinearLayout.LayoutParams(tileSize, tileSize))
         column.addView(TextView(context).apply {
@@ -197,8 +244,12 @@ class GlowAppLibraryView @JvmOverloads constructor(
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             gravity = Gravity.CENTER
             maxLines = 1
-            setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0x55000000)
+            setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0x88000000.toInt())
+            minHeight = dp(GlowGlass.MIN_TOUCH_DP - 16)
             setOnClickListener { openCategory(category) }
+            contentDescription = context.getString(R.string.glow_library_open_named, category.label, apps.size)
+            GlowGlass.asHeading(this)
+            GlowGlass.asButton(this)
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp(6)
         })
@@ -211,23 +262,37 @@ class GlowAppLibraryView @JvmOverloads constructor(
             topMargin = pad + (index / 2) * (cell + gap)
         }
 
-    private fun createBigIcon(app: AppInfo): View {
+    private fun bubble(app: AppInfo, parent: ViewGroup): BubbleTextView {
         val icon = LayoutInflater.from(context)
-            .inflate(R.layout.all_apps_icon, this, false) as BubbleTextView
+            .inflate(R.layout.all_apps_icon, parent, false) as BubbleTextView
         icon.applyFromApplicationInfo(app)
-        icon.setTextVisibility(false)
-        icon.setCenterVertically(true)
         icon.setOnClickListener(launcher.itemOnClickListener)
         icon.setOnLongClickListener(launcher.allAppsItemLongClickListener)
         icon.setLongPressTimeoutFactor(1f)
         return icon
     }
 
-    private fun createMiniGrid(apps: List<AppInfo>, cell: Int, onClick: () -> Unit): View {
+    private fun createBigIcon(app: AppInfo): View =
+        bubble(app, this).apply {
+            setTextVisibility(false)
+            setCenterVertically(true)
+            // The label is hidden, so TalkBack needs the name explicitly
+            contentDescription = app.contentDescription ?: app.title
+        }
+
+    private fun createMiniGrid(
+        apps: List<AppInfo>,
+        cell: Int,
+        label: String,
+        count: Int,
+        onClick: () -> Unit,
+    ): View {
         val grid = FrameLayout(context).apply {
             isClickable = true
+            isFocusable = true
             setOnClickListener { onClick() }
-            contentDescription = context.getString(R.string.glow_library_open_category)
+            contentDescription = context.getString(R.string.glow_library_more_apps, label, count)
+            GlowGlass.asButton(this)
         }
         val gap = dp(4)
         val mini = (cell - gap) / 2
@@ -244,29 +309,35 @@ class GlowAppLibraryView @JvmOverloads constructor(
         return grid
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Opened category (like a folder)
+    // ---------------------------------------------------------------------------------------
+
     private fun openCategory(category: Category) {
         closeCategory(animate = false)
-        val canBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        if (canBlur) {
-            // Frosted backdrop: blur the library behind the open category
+        val canBlur = GlowGlass.canAffordBlur(context)
+        if (canBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Frosted backdrop: blur the library behind the open category (set once, not animated)
             val radius = 28 * density
-            scroll.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP))
+            tiles.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP))
         }
+        val animate = GlowGlass.animationsEnabled()
         val overlay = FrameLayout(context).apply {
             setBackgroundColor(Color.argb(if (canBlur) 70 else 170, 0, 0, 0))
             isClickable = true
             setOnClickListener { closeCategory() }
-            alpha = 0f
+            contentDescription = context.getString(R.string.glow_close)
+            alpha = if (animate) 0f else 1f
         }
         val cardWidth = width - 2 * dp(20)
         val cardPad = dp(16)
-        val columns = 4
+        val columns = launcher.deviceProfile.numShownAllAppsColumns.coerceIn(3, 6)
         val cellWidth = (cardWidth - 2 * cardPad) / columns
         val cellHeight = launcher.deviceProfile.allAppsProfile.cellHeightPx
 
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = glass(dp(30).toFloat(), fillAlpha = if (canBlur) 64 else 90, strokeAlpha = 50)
+            background = GlowGlass.drawable(context, dp(30).toFloat(), GlowGlass.Level.CARD)
             setPadding(cardPad, cardPad, cardPad, cardPad)
             isClickable = true
         }
@@ -276,125 +347,133 @@ class GlowAppLibraryView @JvmOverloads constructor(
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(4), 0, 0, dp(12))
+            GlowGlass.asHeading(this)
         })
-        val grid = GridLayout(context).apply { columnCount = columns }
-        category.apps.forEach { app ->
-            val icon = LayoutInflater.from(context)
-                .inflate(R.layout.all_apps_icon, grid, false) as BubbleTextView
-            icon.applyFromApplicationInfo(app)
-            icon.setOnClickListener(launcher.itemOnClickListener)
-            icon.setOnLongClickListener(launcher.allAppsItemLongClickListener)
-            icon.setLongPressTimeoutFactor(1f)
-            grid.addView(icon, GridLayout.LayoutParams().apply {
-                width = cellWidth
-                height = cellHeight
-            })
-        }
-        val rows = (category.apps.size + columns - 1) / columns
-        val maxGridHeight = (height * 0.62f).toInt()
-        val gridScroll = ScrollView(context).apply {
+        val apps = category.apps
+        val grid = RecyclerView(context).apply {
+            layoutManager = GridLayoutManager(context, columns)
+            itemAnimator = null
             isVerticalScrollBarEnabled = false
-            addView(grid)
+            adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                override fun getItemCount() = apps.size
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+                    object : RecyclerView.ViewHolder(FrameLayout(context).apply {
+                        layoutParams = RecyclerView.LayoutParams(cellWidth, cellHeight)
+                    }) {}
+
+                override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                    val root = holder.itemView as FrameLayout
+                    root.removeAllViews()
+                    root.addView(bubble(apps[position], root), LayoutParams(cellWidth, cellHeight))
+                }
+            }
         }
-        card.addView(gridScroll, LinearLayout.LayoutParams(
+        val rows = (apps.size + columns - 1) / columns
+        card.addView(grid, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            minOf(rows * cellHeight, maxGridHeight),
+            minOf(rows * cellHeight, (height * 0.62f).toInt()),
         ))
         overlay.addView(card, LayoutParams(cardWidth, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         addView(overlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         folderOverlay = overlay
-        card.scaleX = 0.9f
-        card.scaleY = 0.9f
-        overlay.animate().alpha(1f).setDuration(160).start()
-        card.animate().scaleX(1f).scaleY(1f).setDuration(200).start()
+        if (animate) {
+            card.scaleX = 0.9f
+            card.scaleY = 0.9f
+            overlay.animate().alpha(1f).setDuration(160).start()
+            card.animate().scaleX(1f).scaleY(1f).setDuration(200).start()
+        }
+        card.post { card.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_VIEW_FOCUSED) }
     }
 
     // ---------------------------------------------------------------------------------------
     // Alphabetical list (the "A–Z" pill), with an index strip on the right
     // ---------------------------------------------------------------------------------------
 
+    private sealed class Row {
+        data class Header(val letter: String) : Row()
+        data class App(val app: AppInfo, val divider: Boolean) : Row()
+        data object PrivateSpace : Row()
+    }
+
     private var listOverlay: View? = null
-    private var listScroll: ScrollView? = null
+    private var listView: RecyclerView? = null
 
     private fun openList() {
         if (listOverlay != null) return
         val apps = appsProvider?.invoke() ?: return
         val collator = java.text.Collator.getInstance(Locale.getDefault())
-        val sorted = apps.sortedWith(Comparator { a, b -> collator.compare(a.title?.toString() ?: "", b.title?.toString() ?: "") })
+        val sorted = apps.sortedWith { a, b -> collator.compare(a.title?.toString() ?: "", b.title?.toString() ?: "") }
 
+        val rows = ArrayList<Row>(sorted.size + 30)
+        val sections = linkedMapOf<String, Int>()
+        var lastLetter: String? = null
+        sorted.forEach { app ->
+            val letter = GlowCategoryRules.sectionOf(app.title?.toString())
+            if (letter != lastLetter) {
+                lastLetter = letter
+                sections[letter] = rows.size
+                rows += Row.Header(letter)
+                rows += Row.App(app, divider = false)
+            } else {
+                rows += Row.App(app, divider = true)
+            }
+        }
+        if (hasPrivateSpace?.invoke() == true && onShowAllApps != null) rows += Row.PrivateSpace
+
+        val animate = GlowGlass.animationsEnabled()
         val overlay = FrameLayout(context).apply {
-            alpha = 0f
+            alpha = if (animate) 0f else 1f
             isClickable = true
         }
         val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        val back = TextView(context).apply {
-            text = context.getString(R.string.glow_library_categories)
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setPadding(dp(14), 0, dp(14), 0)
-            background = glass(dp(16).toFloat())
+        val back = GlowGlass.pill(context, context.getString(R.string.glow_library_categories), PILL_HEIGHT_DP).apply {
             setOnClickListener { closeList(true) }
         }
-        column.addView(back, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(32)).apply {
+        column.addView(back, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
             gravity = Gravity.END
             marginEnd = dp(SIDE_PADDING_DP)
-            topMargin = dp(4)
-            bottomMargin = dp(8)
         })
 
-        val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        val sections = linkedMapOf<String, View>()
-        var lastLetter: String? = null
-        sorted.forEach { app ->
-            val letter = sectionOf(app)
-            if (letter != lastLetter) {
-                lastLetter = letter
-                val header = TextView(context).apply {
-                    text = letter
-                    setTextColor(Color.argb(200, 255, 255, 255))
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-                    typeface = Typeface.DEFAULT_BOLD
-                    setPadding(dp(SIDE_PADDING_DP + 4), dp(14), 0, dp(4))
-                }
-                sections[letter] = header
-                list.addView(header)
-            } else {
-                list.addView(View(context).apply { setBackgroundColor(Color.argb(40, 255, 255, 255)) },
-                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, (density * 0.5f).toInt())).apply {
-                        marginStart = dp(SIDE_PADDING_DP + 4 + 42 + 14)
-                        marginEnd = dp(28)
-                    })
-            }
-            list.addView(createListRow(app))
-        }
-        val listScroll = ScrollView(context).apply {
+        val layoutManager = LinearLayoutManager(context)
+        val list = RecyclerView(context).apply {
+            this.layoutManager = layoutManager
+            itemAnimator = null
             isVerticalScrollBarEnabled = false
             overScrollMode = OVER_SCROLL_NEVER
             clipToPadding = false
             isVerticalFadingEdgeEnabled = true
             setFadingEdgeLength(dp(32))
-            setPadding(0, 0, 0, scroll.paddingBottom)
-            addView(list, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+            setPadding(0, 0, 0, bottomInset + dp(24))
+            adapter = ListAdapter(rows)
         }
-        column.addView(listScroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        column.addView(list, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         overlay.addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
-        // Index strip: tap or slide over a letter to jump to its section
+        // Index strip: tap or slide over a letter to jump to its section (TalkBack users scroll the list)
         val letters = sections.keys.toList()
+        val bubble = TextView(context).apply {
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f)
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            background = GlowGlass.drawable(context, dp(36).toFloat(), GlowGlass.Level.CARD)
+            visibility = GONE
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
         val index = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
             letters.forEach { l ->
                 addView(TextView(context).apply {
                     text = l
-                    setTextColor(Color.argb(220, 255, 255, 255))
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f)
+                    setTextColor(Color.argb(230, 255, 255, 255))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
                     typeface = Typeface.DEFAULT_BOLD
                     gravity = Gravity.CENTER
                     includeFontPadding = false
-                }, LinearLayout.LayoutParams(dp(22), LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    setShadowLayer(dp(2).toFloat(), 0f, 0f, 0x88000000.toInt())
+                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp(1)
                     bottomMargin = dp(1)
                 })
@@ -409,77 +488,146 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 val i = (((ev.y - first.top) / span) * letters.size).toInt().coerceIn(0, letters.size - 1)
                 if (i != lastJump) {
                     lastJump = i
-                    sections[letters[i]]?.let { listScroll.scrollTo(0, it.top) }
-                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                    sections[letters[i]]?.let { layoutManager.scrollToPositionWithOffset(it, 0) }
+                    bubble.text = letters[i]
+                    bubble.visibility = VISIBLE
+                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                 }
-                if (ev.actionMasked == android.view.MotionEvent.ACTION_UP ||
-                    ev.actionMasked == android.view.MotionEvent.ACTION_CANCEL
-                ) {
+                if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) {
                     lastJump = -1
+                    bubble.visibility = GONE
                 }
                 v.parent?.requestDisallowInterceptTouchEvent(true)
                 true
             }
         }
-        overlay.addView(index, LayoutParams(dp(26), LayoutParams.MATCH_PARENT, Gravity.END).apply {
-            topMargin = dp(44)
-            bottomMargin = scroll.paddingBottom
+        overlay.addView(index, LayoutParams(dp(INDEX_WIDTH_DP), LayoutParams.MATCH_PARENT, Gravity.END).apply {
+            topMargin = dp(GlowGlass.MIN_TOUCH_DP + 4)
+            bottomMargin = bottomInset + dp(24)
         })
+        overlay.addView(bubble, LayoutParams(dp(72), dp(72), Gravity.CENTER))
 
         addView(overlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         listOverlay = overlay
-        this.listScroll = listScroll
-        scroll.animate().alpha(0f).setDuration(140).start()
-        overlay.animate().alpha(1f).setDuration(180).start()
-    }
-
-    private fun closeList(animate: Boolean): Boolean {
-        val overlay = listOverlay ?: return false
-        listOverlay = null
-        listScroll = null
-        scroll.animate().cancel()
+        listView = list
         if (animate) {
-            scroll.animate().alpha(1f).setDuration(180).start()
-            overlay.animate().alpha(0f).setDuration(140).withEndAction { removeView(overlay) }.start()
+            tiles.animate().alpha(0f).setDuration(140).start()
+            overlay.animate().alpha(1f).setDuration(180).start()
         } else {
-            scroll.alpha = 1f
-            removeView(overlay)
+            tiles.alpha = 0f
         }
-        return true
     }
 
-    private fun sectionOf(app: AppInfo): String {
-        val c = app.title?.toString()?.trim()?.firstOrNull() ?: return "#"
-        return if (c.isLetter()) c.uppercaseChar().toString() else "#"
+    private inner class ListAdapter(private val rows: List<Row>) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        override fun getItemCount() = rows.size
+        override fun getItemViewType(position: Int) = when (rows[position]) {
+            is Row.Header -> 0
+            is Row.App -> 1
+            Row.PrivateSpace -> 2
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            val view = if (viewType == 2) {
+                FrameLayout(context).apply {
+                    setPadding(0, dp(20), 0, 0)
+                    addView(
+                        GlowGlass.pill(context, context.getString(R.string.glow_library_private_space), PILL_HEIGHT_DP + 4).apply {
+                            setOnClickListener {
+                                closeCategory(false)
+                                onShowAllApps?.invoke()
+                            }
+                        },
+                        LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL),
+                    )
+                }
+            } else if (viewType == 0) {
+                TextView(context).apply {
+                    setTextColor(Color.argb(220, 255, 255, 255))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                    typeface = Typeface.DEFAULT_BOLD
+                    setPadding(dp(SIDE_PADDING_DP + 4), dp(14), 0, dp(4))
+                    setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0x66000000)
+                    GlowGlass.asHeading(this)
+                }
+            } else {
+                createListRow()
+            }
+            view.layoutParams = RecyclerView.LayoutParams(
+                RecyclerView.LayoutParams.MATCH_PARENT,
+                RecyclerView.LayoutParams.WRAP_CONTENT,
+            )
+            return object : RecyclerView.ViewHolder(view) {}
+        }
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            when (val row = rows[position]) {
+                is Row.Header -> (holder.itemView as TextView).text = row.letter
+                is Row.App -> bindListRow(holder.itemView as LinearLayout, row.app, row.divider)
+                Row.PrivateSpace -> Unit
+            }
+        }
     }
 
-    private fun createListRow(app: AppInfo): View = LinearLayout(context).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(SIDE_PADDING_DP + 4), dp(7), dp(28), dp(7))
-        tag = app
+    private fun createListRow(): LinearLayout = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
         isClickable = true
         isFocusable = true
-        contentDescription = app.title
         val ta = context.obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground))
         foreground = ta.getDrawable(0)
         ta.recycle()
         setOnClickListener(launcher.itemOnClickListener)
-        addView(ImageView(context).apply {
-            setImageDrawable(app.newIcon(context))
+        // divider
+        addView(View(context).apply { setBackgroundColor(Color.argb(40, 255, 255, 255)) },
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, (density * 0.5f).toInt())).apply {
+                marginStart = dp(SIDE_PADDING_DP + 4 + 42 + 14)
+                marginEnd = dp(INDEX_WIDTH_DP)
+            })
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(GlowGlass.MIN_TOUCH_DP + 8)
+            setPadding(dp(SIDE_PADDING_DP + 4), dp(6), dp(INDEX_WIDTH_DP), dp(6))
+        }
+        row.addView(ImageView(context).apply {
             scaleType = ImageView.ScaleType.FIT_CENTER
             importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         }, LinearLayout.LayoutParams(dp(42), dp(42)))
-        addView(TextView(context).apply {
-            text = app.title
+        row.addView(TextView(context).apply {
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
             importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+            setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0x66000000)
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
             marginStart = dp(14)
         })
+        addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+    }
+
+    private fun bindListRow(view: LinearLayout, app: AppInfo, divider: Boolean) {
+        // The launcher's click and long-press handlers read the ItemInfo from the tag
+        view.tag = app
+        view.contentDescription = app.contentDescription ?: app.title
+        view.getChildAt(0).visibility = if (divider) VISIBLE else INVISIBLE
+        val row = view.getChildAt(1) as LinearLayout
+        (row.getChildAt(0) as ImageView).setImageDrawable(app.newIcon(context))
+        (row.getChildAt(1) as TextView).text = app.title
+    }
+
+    private fun closeList(animate: Boolean): Boolean {
+        val overlay = listOverlay ?: return false
+        listOverlay = null
+        listView = null
+        tiles.animate().cancel()
+        if (animate && GlowGlass.animationsEnabled()) {
+            tiles.animate().alpha(1f).setDuration(180).start()
+            overlay.animate().alpha(0f).setDuration(140).withEndAction { removeView(overlay) }.start()
+        } else {
+            tiles.alpha = 1f
+            removeView(overlay)
+        }
+        return true
     }
 
     /** Closes an open category or the alphabetical list. Returns true if one was open. */
@@ -487,8 +635,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
         val closedList = closeList(animate)
         val overlay = folderOverlay ?: return closedList
         folderOverlay = null
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) scroll.setRenderEffect(null)
-        if (animate) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) tiles.setRenderEffect(null)
+        if (animate && GlowGlass.animationsEnabled()) {
             overlay.animate().alpha(0f).setDuration(140).withEndAction { removeView(overlay) }.start()
         } else {
             removeView(overlay)
@@ -496,74 +644,83 @@ class GlowAppLibraryView @JvmOverloads constructor(
         return true
     }
 
-    // Matte frosted material: soft white tint with a faint rim (the drawer behind is already blurred)
-    private fun glass(radius: Float, fillAlpha: Int = 40, strokeAlpha: Int = 34) = GradientDrawable().apply {
-        cornerRadius = radius
-        setColor(Color.argb(fillAlpha, 255, 255, 255))
-        setStroke(maxOf(1, density.toInt()), Color.argb(strokeAlpha, 255, 255, 255))
-    }
-
     private fun dp(value: Int): Int = (value * density).toInt()
 
     companion object {
         private const val SIDE_PADDING_DP = 18
         private const val TILE_GAP_DP = 16
+        private const val PILL_HEIGHT_DP = 32
+        private const val INDEX_WIDTH_DP = 30
         private const val RECENT_COUNT = 8
         private const val RECENT_WINDOW_MS = 14L * 24 * 60 * 60 * 1000
+        private const val REBUILD_DELAY_MS = 300L
 
-        /** Personal-profile apps that are not hidden by the user. */
+        /** package -> group, filled once per package; cleared for packages that change. */
+        private val groupCache = ConcurrentHashMap<String, String>()
+
+        /** package -> first install time. */
+        private val installCache = ConcurrentHashMap<String, Long>()
+
+        /** Forgets what is cached about a package (call when it is installed again or updated). */
         @JvmStatic
-        fun visibleApps(context: Context, apps: Array<AppInfo>): List<AppInfo> {
+        fun invalidatePackage(pkg: String) {
+            groupCache.remove(pkg)
+            installCache.remove(pkg)
+        }
+
+        /**
+         * Apps of the personal and work profiles that the user has not hidden.
+         * [isPrivate] filters out Private Space apps, which have their own locked section.
+         */
+        @JvmStatic
+        fun visibleApps(context: Context, apps: Array<AppInfo>, isPrivate: Predicate<ItemInfo>?): List<AppInfo> {
             val hidden = runCatching {
                 PreferenceManager2.getInstance(context).hiddenApps.firstCached()
             }.getOrDefault(emptySet())
-            val me = Process.myUserHandle()
-            return apps.filter { it.user == me && it.toComponentKey().toString() !in hidden }
+            return apps.filter {
+                isPrivate?.test(it) != true && it.toComponentKey().toString() !in hidden
+            }
         }
 
         // Flowerpot categories merged into iOS-like groups
         private val POT_GROUPS = mapOf(
-            "SOCIAL" to "social", "COMMUNICATION" to "social", "DATING" to "social",
-            "ENTERTAINMENT" to "entertainment", "VIDEO" to "entertainment",
-            "MUSIC" to "entertainment", "COMICS" to "entertainment", "EVENTS" to "entertainment",
-            "PHOTOGRAPHY" to "creativity", "ART_AND_DESIGN" to "creativity",
-            "PERSONALIZATION" to "creativity", "BEAUTY" to "creativity",
-            "PRODUCTIVITY" to "productivity", "BUSINESS" to "productivity", "FINANCE" to "productivity",
-            "TOOLS" to "utilities", "LIBRARIES_AND_DEMO" to "utilities", "WEATHER" to "utilities",
-            "AUTO_AND_VEHICLES" to "utilities", "HOUSE_AND_HOME" to "utilities",
-            "NEWS" to "reading", "BOOKS_AND_REFERENCE" to "reading", "SPORTS" to "reading",
-            "SHOPPING" to "shopping", "FOOD_AND_DRINK" to "shopping", "LIFESTYLE" to "shopping",
-            "MAPS_AND_NAVIGATION" to "travel",
-            "HEALTH_AND_FITNESS" to "health", "MEDICAL" to "health", "PARENTING" to "health",
-            "GAME" to "games",
-            "EDUCATION" to "education",
-        )
-
-        private val KEYWORDS = listOf(
-            "social" to listOf("telegram", "whatsapp", "viber", "messenger", "chat", "gram", "vk.", "instagram", "tiktok", "snapchat", "discord", "signal", "facebook", "twitter"),
-            "productivity" to listOf("bank", "pay", "wallet", "finance", "crypto", "money", "invest", "office", "docs", "mail", "calendar", "notes"),
-            "utilities" to listOf("vpn", "clean", "file", "calc", "clock", "settings", "launcher", "adguard", "authenticator", "anydesk", "termux", "terminal", "flashlight"),
-            "shopping" to listOf("shop", "market", "store", "food", "delivery", "eats", "ozon", "wildberries", "aliexpress"),
-            "travel" to listOf("taxi", "bolt", "uber", "maps", "navi", "waze", "yandex.yandexmaps", "booking", "airline"),
-            "entertainment" to listOf("music", "video", "youtube", "netflix", "spotify", "player", "tv", "kino", "stream"),
-            "creativity" to listOf("photo", "camera", "gallery", "editor", "design", "draw"),
-            "games" to listOf("game", "games"),
+            "SOCIAL" to GlowCategoryRules.SOCIAL, "COMMUNICATION" to GlowCategoryRules.SOCIAL,
+            "DATING" to GlowCategoryRules.SOCIAL,
+            "ENTERTAINMENT" to GlowCategoryRules.ENTERTAINMENT, "VIDEO" to GlowCategoryRules.ENTERTAINMENT,
+            "MUSIC" to GlowCategoryRules.ENTERTAINMENT, "COMICS" to GlowCategoryRules.ENTERTAINMENT,
+            "EVENTS" to GlowCategoryRules.ENTERTAINMENT,
+            "PHOTOGRAPHY" to GlowCategoryRules.CREATIVITY, "ART_AND_DESIGN" to GlowCategoryRules.CREATIVITY,
+            "PERSONALIZATION" to GlowCategoryRules.CREATIVITY, "BEAUTY" to GlowCategoryRules.CREATIVITY,
+            "PRODUCTIVITY" to GlowCategoryRules.PRODUCTIVITY, "BUSINESS" to GlowCategoryRules.PRODUCTIVITY,
+            "FINANCE" to GlowCategoryRules.FINANCE,
+            "TOOLS" to GlowCategoryRules.UTILITIES, "LIBRARIES_AND_DEMO" to GlowCategoryRules.UTILITIES,
+            "WEATHER" to GlowCategoryRules.UTILITIES, "AUTO_AND_VEHICLES" to GlowCategoryRules.UTILITIES,
+            "HOUSE_AND_HOME" to GlowCategoryRules.UTILITIES,
+            "NEWS" to GlowCategoryRules.READING, "BOOKS_AND_REFERENCE" to GlowCategoryRules.READING,
+            "SPORTS" to GlowCategoryRules.READING,
+            "SHOPPING" to GlowCategoryRules.SHOPPING, "FOOD_AND_DRINK" to GlowCategoryRules.SHOPPING,
+            "LIFESTYLE" to GlowCategoryRules.SHOPPING,
+            "MAPS_AND_NAVIGATION" to GlowCategoryRules.TRAVEL,
+            "HEALTH_AND_FITNESS" to GlowCategoryRules.HEALTH, "MEDICAL" to GlowCategoryRules.HEALTH,
+            "PARENTING" to GlowCategoryRules.HEALTH,
+            "GAME" to GlowCategoryRules.GAMES,
+            "EDUCATION" to GlowCategoryRules.EDUCATION,
         )
 
         private val GROUP_LABELS = mapOf(
-            "recent" to R.string.glow_library_recent,
-            "social" to R.string.glow_library_social,
-            "entertainment" to R.string.glow_library_entertainment,
-            "creativity" to R.string.glow_library_creativity,
-            "productivity" to R.string.glow_library_productivity,
-            "utilities" to R.string.glow_library_utilities,
-            "reading" to R.string.glow_library_reading,
-            "shopping" to R.string.glow_library_shopping,
-            "travel" to R.string.glow_library_travel,
-            "health" to R.string.glow_library_health,
-            "games" to R.string.glow_library_games,
-            "education" to R.string.glow_library_education,
-            "other" to R.string.glow_library_other,
+            GlowCategoryRules.SOCIAL to R.string.glow_library_social,
+            GlowCategoryRules.ENTERTAINMENT to R.string.glow_library_entertainment,
+            GlowCategoryRules.CREATIVITY to R.string.glow_library_creativity,
+            GlowCategoryRules.PRODUCTIVITY to R.string.glow_library_productivity,
+            GlowCategoryRules.FINANCE to R.string.glow_library_finance,
+            GlowCategoryRules.UTILITIES to R.string.glow_library_utilities,
+            GlowCategoryRules.READING to R.string.glow_library_reading,
+            GlowCategoryRules.SHOPPING to R.string.glow_library_shopping,
+            GlowCategoryRules.TRAVEL to R.string.glow_library_travel,
+            GlowCategoryRules.HEALTH to R.string.glow_library_health,
+            GlowCategoryRules.GAMES to R.string.glow_library_games,
+            GlowCategoryRules.EDUCATION to R.string.glow_library_education,
+            GlowCategoryRules.OTHER to R.string.glow_library_other,
         )
 
         private fun categorize(context: Context, apps: List<AppInfo>, pots: List<Flowerpot>): List<Category> {
@@ -571,26 +728,34 @@ class GlowAppLibraryView @JvmOverloads constructor(
             val groups = linkedMapOf<String, MutableList<AppInfo>>()
             val assigned = HashSet<String>()
 
-            // 1. Flowerpot rules (curated package/intent lists)
-            for (pot in pots) {
-                val group = POT_GROUPS[pot.name.uppercase(Locale.ROOT)] ?: continue
-                val matched = runCatching { pot.categorizeApps(apps).values.flatten() }.getOrDefault(emptyList())
-                for (app in matched) {
-                    val key = app.toComponentKey().toString()
-                    if (assigned.add(key)) groups.getOrPut(group) { mutableListOf() }.add(app)
+            // 1. Flowerpot rules (curated package/intent lists), only for packages not cached yet
+            val uncached = apps.filter { it.targetPackage != null && it.targetPackage !in groupCache }
+            if (uncached.isNotEmpty()) {
+                for (pot in pots) {
+                    val group = POT_GROUPS[pot.name.uppercase(Locale.ROOT)] ?: continue
+                    val matched = runCatching { pot.categorizeApps(uncached).values.flatten() }.getOrDefault(emptyList())
+                    for (app in matched) {
+                        val pkg = app.targetPackage ?: continue
+                        groupCache.putIfAbsent(pkg, group)
+                    }
                 }
             }
 
             // 2. Android's own app category, 3. package/label keywords, 4. system apps -> utilities
             for (app in apps) {
                 val key = app.toComponentKey().toString()
-                if (key in assigned) continue
+                if (!assigned.add(key)) continue
                 val pkg = app.targetPackage ?: continue
-                val info = runCatching { pm.getApplicationInfo(pkg, 0) }.getOrNull()
-                val group = info?.let { androidCategory(it) }
-                    ?: keywordCategory(pkg, app.title?.toString())
-                    ?: if (info != null && info.flags and ApplicationInfo.FLAG_SYSTEM != 0) "utilities" else "other"
-                assigned.add(key)
+                val group = groupCache.getOrPut(pkg) {
+                    val info = runCatching { pm.getApplicationInfo(pkg, 0) }.getOrNull()
+                    info?.let { androidCategory(it) }
+                        ?: GlowCategoryRules.keywordCategory(pkg, app.title?.toString())
+                        ?: if (info != null && info.flags and ApplicationInfo.FLAG_SYSTEM != 0) {
+                            GlowCategoryRules.UTILITIES
+                        } else {
+                            GlowCategoryRules.OTHER
+                        }
+                }
                 groups.getOrPut(group) { mutableListOf() }.add(app)
             }
 
@@ -598,47 +763,47 @@ class GlowAppLibraryView @JvmOverloads constructor(
             val result = mutableListOf<Category>()
 
             recentlyAdded(pm, apps).takeIf { it.isNotEmpty() }?.let {
-                result += Category(context.getString(R.string.glow_library_recent), it)
+                result += Category("recent", context.getString(R.string.glow_library_recent), it)
             }
-            groups.filterKeys { it != "other" }
+            groups.filterKeys { it != GlowCategoryRules.OTHER }
                 .entries
                 .sortedByDescending { it.value.size }
                 .forEach { (group, list) ->
-                    result += Category(context.getString(GROUP_LABELS.getValue(group)), list.sortedWith(byTitle))
+                    val label = GROUP_LABELS[group] ?: R.string.glow_library_other
+                    result += Category(group, context.getString(label), list.sortedWith(byTitle))
                 }
-            groups["other"]?.let { result += Category(context.getString(R.string.glow_library_other), it.sortedWith(byTitle)) }
+            groups[GlowCategoryRules.OTHER]?.let {
+                result += Category(GlowCategoryRules.OTHER, context.getString(R.string.glow_library_other), it.sortedWith(byTitle))
+            }
             return result
         }
 
         private fun androidCategory(info: ApplicationInfo): String? {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
             return when (info.category) {
-                ApplicationInfo.CATEGORY_GAME -> "games"
-                ApplicationInfo.CATEGORY_AUDIO, ApplicationInfo.CATEGORY_VIDEO -> "entertainment"
-                ApplicationInfo.CATEGORY_IMAGE -> "creativity"
-                ApplicationInfo.CATEGORY_SOCIAL -> "social"
-                ApplicationInfo.CATEGORY_NEWS -> "reading"
-                ApplicationInfo.CATEGORY_MAPS -> "travel"
-                ApplicationInfo.CATEGORY_PRODUCTIVITY -> "productivity"
-                ApplicationInfo.CATEGORY_ACCESSIBILITY -> "utilities"
+                ApplicationInfo.CATEGORY_GAME -> GlowCategoryRules.GAMES
+                ApplicationInfo.CATEGORY_AUDIO, ApplicationInfo.CATEGORY_VIDEO -> GlowCategoryRules.ENTERTAINMENT
+                ApplicationInfo.CATEGORY_IMAGE -> GlowCategoryRules.CREATIVITY
+                ApplicationInfo.CATEGORY_SOCIAL -> GlowCategoryRules.SOCIAL
+                ApplicationInfo.CATEGORY_NEWS -> GlowCategoryRules.READING
+                ApplicationInfo.CATEGORY_MAPS -> GlowCategoryRules.TRAVEL
+                ApplicationInfo.CATEGORY_PRODUCTIVITY -> GlowCategoryRules.PRODUCTIVITY
+                ApplicationInfo.CATEGORY_ACCESSIBILITY -> GlowCategoryRules.UTILITIES
                 else -> null
             }
-        }
-
-        private fun keywordCategory(pkg: String, title: String?): String? {
-            val haystack = (pkg + " " + (title ?: "")).lowercase(Locale.ROOT)
-            return KEYWORDS.firstOrNull { (_, words) -> words.any { it in haystack } }?.first
         }
 
         private fun recentlyAdded(pm: PackageManager, apps: List<AppInfo>): List<AppInfo> {
             val now = System.currentTimeMillis()
             return apps.mapNotNull { app ->
                 val pkg = app.targetPackage ?: return@mapNotNull null
-                val installed = runCatching { pm.getPackageInfo(pkg, 0).firstInstallTime }.getOrNull()
-                    ?: return@mapNotNull null
-                if (now - installed > RECENT_WINDOW_MS) null else app to installed
+                val installed = installCache.getOrPut(pkg) {
+                    runCatching { pm.getPackageInfo(pkg, 0).firstInstallTime }.getOrDefault(0L)
+                }
+                if (installed <= 0L || now - installed > RECENT_WINDOW_MS) null else app to installed
             }
                 .sortedByDescending { it.second }
+                .distinctBy { it.first.toComponentKey() }
                 .take(RECENT_COUNT)
                 .map { it.first }
         }
