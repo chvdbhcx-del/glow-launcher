@@ -729,7 +729,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
             val assigned = HashSet<String>()
 
             // 1. Flowerpot rules (curated package/intent lists), only for packages not cached yet
-            val uncached = apps.filter { it.targetPackage != null && it.targetPackage !in groupCache }
+            val uncached = apps.filter { it.targetPackage != null && !groupCache.containsKey(it.targetPackage) }
             if (uncached.isNotEmpty()) {
                 for (pot in pots) {
                     val group = POT_GROUPS[pot.name.uppercase(Locale.ROOT)] ?: continue
