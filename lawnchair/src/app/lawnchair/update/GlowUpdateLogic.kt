@@ -99,7 +99,9 @@ object GlowUpdateLogic {
                 .maxByOrNull { testNumber(it.tag)!! }
                 ?.takeIf { ownTest == null || testNumber(it.tag)!! > ownTest }
         } else {
-            usable.filter { testNumber(it.tag) == null }
+            // Stable builds only move to stable releases; a beta build may also take newer betas.
+            val ownIsPre = ownTag.contains('-')
+            usable.filter { testNumber(it.tag) == null && (ownIsPre || !it.tag.contains('-')) }
                 .maxWithOrNull { x, y -> compareVersions(x.tag, y.tag) }
                 ?.takeIf { compareVersions(it.tag, ownTag) > 0 }
         }

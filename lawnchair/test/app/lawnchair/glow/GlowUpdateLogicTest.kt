@@ -44,6 +44,7 @@ class GlowUpdateLogicTest {
         val list = listOf(release("v1.0.0-test30"), release("v1.0.1"), release("v1.1.0-beta1"))
         assertEquals("v1.0.1", GlowUpdateLogic.pickNewer(list, "v1.0.0")?.tag)
         assertNull(GlowUpdateLogic.pickNewer(list, "v1.0.1"))
+        assertEquals("v1.1.0-beta1", GlowUpdateLogic.pickNewer(list, "v1.0.1-beta1")?.tag)
     }
 
     @Test
