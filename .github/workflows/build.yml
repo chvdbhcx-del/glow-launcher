@@ -32,6 +32,8 @@ jobs:
         with:
           name: glow-launcher-debug
           path: build/outputs/apk/**/*.apk
+          # Test APKs are only needed for a few days; 90-day default filled the storage quota
+          retention-days: 5
 
   # Unit tests of the Glow logic (updater rules, App Library categories)
   glow-unit-tests:
