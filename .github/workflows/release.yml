@@ -95,9 +95,12 @@ jobs:
           # The in-app updater only installs an APK whose SHA-256 matches this file
           sha256sum "Glow-Launcher-${RELEASE_TAG}.apk" > "Glow-Launcher-${RELEASE_TAG}.apk.sha256"
       - uses: actions/upload-artifact@v7
+        # The APK is published on the release below; a full artifact storage must not block it
+        continue-on-error: true
         with:
           name: glow-launcher-release
           path: Glow-Launcher-*.apk*
+          retention-days: 5
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
