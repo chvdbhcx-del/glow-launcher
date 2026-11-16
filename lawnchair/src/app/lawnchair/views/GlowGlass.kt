@@ -90,6 +90,7 @@ object GlowGlass {
     fun dp(context: Context, value: Int): Int = dp(context, value.toFloat())
 
     /** True when the wallpaper behind the launcher is light (dark text would read better). */
+    @JvmStatic
     fun isLightWallpaper(context: Context): Boolean =
         runCatching { Themes.getAttrBoolean(context, R.attr.isWorkspaceDarkText) }.getOrDefault(false)
 
