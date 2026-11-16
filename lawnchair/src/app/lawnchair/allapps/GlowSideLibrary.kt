@@ -22,7 +22,7 @@ import android.view.MotionEvent
 import android.view.VelocityTracker
 import android.view.View
 import android.view.ViewConfiguration
-import android.view.animation.DecelerateInterpolator
+import app.lawnchair.views.GlowGlass
 import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherState
 import com.android.launcher3.allapps.AllAppsTransitionController
@@ -126,8 +126,8 @@ object GlowSideLibrary {
                     } else {
                         settle?.cancel()
                         settle = ObjectAnimator.ofFloat(controller, AllAppsTransitionController.ALL_APPS_PROGRESS, 0f)
-                            .setDuration(200)
-                            .apply { interpolator = DecelerateInterpolator() }
+                            .setDuration(GlowGlass.Motion.MEDIUM)
+                            .apply { interpolator = GlowGlass.Motion.ENTER }
                             .also { anim ->
                                 // Any state change (Home pressed, back gesture) takes over from the snap-back
                                 val listener = object : com.android.launcher3.statemanager.StateManager.StateListener<LauncherState> {

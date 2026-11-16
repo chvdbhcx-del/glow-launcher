@@ -36,6 +36,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.doOnLayout
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -232,7 +233,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
             val rest = apps.size - 3
             square.addView(
                 createMiniGrid(apps.subList(3, minOf(7, apps.size)), cell, category.label, rest) {
-                    openCategory(category)
+                    openCategory(category, square)
                 },
                 cellParams(3, cell, pad, innerGap),
             )
@@ -246,7 +247,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
             maxLines = 1
             setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0x88000000.toInt())
             minHeight = dp(GlowGlass.MIN_TOUCH_DP - 16)
-            setOnClickListener { openCategory(category) }
+            setOnClickListener { openCategory(category, square) }
             contentDescription = context.getString(R.string.glow_library_open_named, category.label, apps.size)
             GlowGlass.asHeading(this)
             GlowGlass.asButton(this)
@@ -313,14 +314,9 @@ class GlowAppLibraryView @JvmOverloads constructor(
     // Opened category (like a folder)
     // ---------------------------------------------------------------------------------------
 
-    private fun openCategory(category: Category) {
+    private fun openCategory(category: Category, from: View?) {
         closeCategory(animate = false)
         val canBlur = GlowGlass.canAffordBlur(context)
-        if (canBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Frosted backdrop: blur the library behind the open category (set once, not animated)
-            val radius = 28 * density
-            tiles.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP))
-        }
         val animate = GlowGlass.animationsEnabled()
         val overlay = FrameLayout(context).apply {
             setBackgroundColor(Color.argb(if (canBlur) 70 else 170, 0, 0, 0))
@@ -329,6 +325,9 @@ class GlowAppLibraryView @JvmOverloads constructor(
             contentDescription = context.getString(R.string.glow_close)
             alpha = if (animate) 0f else 1f
         }
+        // Frosted backdrop: the library behind the open category blurs in with the dim
+        overlay.animate().setUpdateListener { setTilesBlur(if (canBlur) overlay.alpha else 0f) }
+        if (!animate) setTilesBlur(if (canBlur) 1f else 0f)
         val cardWidth = width - 2 * dp(20)
         val cardPad = dp(16)
         val columns = launcher.deviceProfile.numShownAllAppsColumns.coerceIn(3, 6)
@@ -376,11 +375,24 @@ class GlowAppLibraryView @JvmOverloads constructor(
         overlay.addView(card, LayoutParams(cardWidth, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         addView(overlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         folderOverlay = overlay
+        folderCard = card
+        folderOrigin = from?.let { java.lang.ref.WeakReference(it) }
         if (animate) {
-            card.scaleX = 0.9f
-            card.scaleY = 0.9f
-            overlay.animate().alpha(1f).setDuration(160).start()
-            card.animate().scaleX(1f).scaleY(1f).setDuration(200).start()
+            overlay.animate().alpha(1f).setDuration(GlowGlass.Motion.MEDIUM)
+                .setInterpolator(GlowGlass.Motion.STANDARD).start()
+            // Like a folder: the card grows out of the tile that was tapped
+            card.alpha = 0f
+            card.doOnLayout {
+                if (!placeOnOrigin(card, from)) {
+                    card.scaleX = 0.9f
+                    card.scaleY = 0.9f
+                }
+                card.animate().alpha(1f).setDuration(GlowGlass.Motion.SHORT).start()
+                card.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f)
+                    .setDuration(GlowGlass.Motion.LONG)
+                    .setInterpolator(GlowGlass.Motion.ENTER)
+                    .start()
+            }
         }
         card.post { card.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_VIEW_FOCUSED) }
     }
@@ -490,12 +502,23 @@ class GlowAppLibraryView @JvmOverloads constructor(
                     lastJump = i
                     sections[letters[i]]?.let { layoutManager.scrollToPositionWithOffset(it, 0) }
                     bubble.text = letters[i]
-                    bubble.visibility = VISIBLE
+                    if (bubble.visibility != VISIBLE) {
+                        bubble.animate().cancel()
+                        bubble.alpha = 1f
+                        bubble.visibility = VISIBLE
+                    }
                     v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                 }
                 if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) {
                     lastJump = -1
-                    bubble.visibility = GONE
+                    // The letter lingers for a moment, then fades instead of blinking out
+                    bubble.animate().cancel()
+                    if (GlowGlass.animationsEnabled()) {
+                        bubble.animate().alpha(0f).setStartDelay(250).setDuration(GlowGlass.Motion.SHORT)
+                            .withEndAction { bubble.visibility = GONE }.start()
+                    } else {
+                        bubble.visibility = GONE
+                    }
                 }
                 v.parent?.requestDisallowInterceptTouchEvent(true)
                 true
@@ -511,8 +534,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
         listOverlay = overlay
         listView = list
         if (animate) {
-            tiles.animate().alpha(0f).setDuration(140).start()
-            overlay.animate().alpha(1f).setDuration(180).start()
+            tiles.animate().alpha(0f).setDuration(GlowGlass.Motion.SHORT)
+                .setInterpolator(GlowGlass.Motion.EXIT).start()
+            overlay.translationY = dp(16).toFloat()
+            overlay.animate().alpha(1f).translationY(0f).setDuration(GlowGlass.Motion.MEDIUM)
+                .setInterpolator(GlowGlass.Motion.ENTER).start()
         } else {
             tiles.alpha = 0f
         }
@@ -621,8 +647,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
         listView = null
         tiles.animate().cancel()
         if (animate && GlowGlass.animationsEnabled()) {
-            tiles.animate().alpha(1f).setDuration(180).start()
-            overlay.animate().alpha(0f).setDuration(140).withEndAction { removeView(overlay) }.start()
+            tiles.animate().alpha(1f).setDuration(GlowGlass.Motion.MEDIUM)
+                .setInterpolator(GlowGlass.Motion.STANDARD).start()
+            overlay.animate().alpha(0f).translationY(dp(16).toFloat()).setDuration(GlowGlass.Motion.SHORT)
+                .setInterpolator(GlowGlass.Motion.EXIT)
+                .withEndAction { removeView(overlay) }.start()
         } else {
             tiles.alpha = 1f
             removeView(overlay)
@@ -634,14 +663,82 @@ class GlowAppLibraryView @JvmOverloads constructor(
     fun closeCategory(animate: Boolean = true): Boolean {
         val closedList = closeList(animate)
         val overlay = folderOverlay ?: return closedList
+        val card = folderCard
+        val origin = folderOrigin?.get()
         folderOverlay = null
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) tiles.setRenderEffect(null)
+        folderCard = null
+        folderOrigin = null
         if (animate && GlowGlass.animationsEnabled()) {
-            overlay.animate().alpha(0f).setDuration(140).withEndAction { removeView(overlay) }.start()
+            // The card shrinks back into its tile while the blur and dim clear
+            if (card != null) {
+                card.animate().cancel()
+                card.pivotX = 0f
+                card.pivotY = 0f
+                if (placeOnOrigin(card, origin, animate = true)) {
+                    card.animate().alpha(0f).setStartDelay(GlowGlass.Motion.SHORT / 2)
+                        .setDuration(GlowGlass.Motion.SHORT).start()
+                }
+            }
+            overlay.animate().cancel()
+            overlay.animate().alpha(0f).setDuration(GlowGlass.Motion.MEDIUM)
+                .setInterpolator(GlowGlass.Motion.EXIT)
+                .setUpdateListener { setTilesBlur(if (GlowGlass.canAffordBlur(context)) overlay.alpha else 0f) }
+                .withEndAction {
+                    setTilesBlur(0f)
+                    removeView(overlay)
+                }.start()
         } else {
+            overlay.animate().cancel()
+            setTilesBlur(0f)
             removeView(overlay)
         }
         return true
+    }
+
+    private var folderCard: View? = null
+    private var folderOrigin: java.lang.ref.WeakReference<View>? = null
+    private var blurStep = 0
+
+    /**
+     * Moves [card] (pivot at its top-left corner) onto [origin], the tile it opens from,
+     * at once or as an animation. Returns false when there is no usable tile.
+     */
+    private fun placeOnOrigin(card: View, origin: View?, animate: Boolean = false): Boolean {
+        if (origin == null || !origin.isAttachedToWindow || card.width == 0) return false
+        val o = IntArray(2)
+        val c = IntArray(2)
+        origin.getLocationInWindow(o)
+        // The card's untransformed position: its layout position inside the overlay
+        (card.parent as View).getLocationInWindow(c)
+        val scale = origin.width.toFloat() / card.width
+        val tx = o[0] - (c[0] + card.left).toFloat()
+        val ty = o[1] - (c[1] + card.top).toFloat()
+        card.pivotX = 0f
+        card.pivotY = 0f
+        if (animate) {
+            card.animate().translationX(tx).translationY(ty).scaleX(scale).scaleY(scale)
+                .setDuration(GlowGlass.Motion.MEDIUM)
+                .setInterpolator(GlowGlass.Motion.EXIT)
+                .start()
+        } else {
+            card.translationX = tx
+            card.translationY = ty
+            card.scaleX = scale
+            card.scaleY = scale
+        }
+        return true
+    }
+
+    /** Blurs the tiles behind an open category; the radius moves in a few steps to stay cheap. */
+    private fun setTilesBlur(fraction: Float) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val step = Math.round(fraction.coerceIn(0f, 1f) * BLUR_STEPS)
+        if (step == blurStep) return
+        blurStep = step
+        val radius = 28 * density * step / BLUR_STEPS
+        tiles.setRenderEffect(
+            if (step == 0) null else RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP),
+        )
     }
 
     private fun dp(value: Int): Int = (value * density).toInt()
@@ -654,6 +751,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
         private const val RECENT_COUNT = 8
         private const val RECENT_WINDOW_MS = 14L * 24 * 60 * 60 * 1000
         private const val REBUILD_DELAY_MS = 300L
+        private const val BLUR_STEPS = 6
 
         /** package -> group, filled once per package; cleared for packages that change. */
         private val groupCache = ConcurrentHashMap<String, String>()

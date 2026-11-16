@@ -126,8 +126,11 @@ object GlowPageIndicator {
      *
      * @param position current page position, fractional while scrolling
      * @param dotsAlpha 0..1, how visible the page dots are (they auto-hide on the home screen)
+     * @param onLightWallpaper glass turns into a dark tint and bare dots turn dark, so they
+     *   stay readable over a light wallpaper
      */
     @JvmStatic
+    @JvmOverloads
     fun draw(
         view: View,
         canvas: Canvas,
@@ -136,6 +139,7 @@ object GlowPageIndicator {
         position: Float,
         dotsAlpha: Float,
         isRtl: Boolean,
+        onLightWallpaper: Boolean = false,
     ) {
         val d = view.resources.displayMetrics.density
         val cx = view.width / 2f
@@ -149,13 +153,17 @@ object GlowPageIndicator {
                 // While swiping the pill morphs to the width of the dots.
                 val searchWidth = rect.width()
                 val dotsPillWidth = dotsWidth + 24f * d
-                val showDots = if (numPages > 1) dotsAlpha else 0f
-                val width = searchWidth + (dotsPillWidth - searchWidth) * showDots
+                val showDots = if (numPages > 1) dotsAlpha.coerceIn(0f, 1f) else 0f
+                val morph = GlowGlass.Motion.STANDARD.getInterpolation(showDots)
+                val width = searchWidth + (dotsPillWidth - searchWidth) * morph
                 val h = PILL_HEIGHT_DP * d
                 rect.set(cx - width / 2f, cy - h / 2f, cx + width / 2f, cy + h / 2f)
-                drawPill(canvas, rect, d, 1f)
-                if (showDots > 0f) drawDots(canvas, cx, cy, numPages, pos, d, showDots)
-                val searchAlpha = 1f - showDots
+                drawPill(canvas, rect, d, 1f, onLightWallpaper)
+                // Hand-over instead of a cross-fade: the label leaves during the first half,
+                // the dots arrive during the second, so the two never overlap in a smudge
+                val searchAlpha = (1f - showDots * 2f).coerceIn(0f, 1f)
+                val dotsIn = (showDots * 2f - 1f).coerceIn(0f, 1f)
+                if (dotsIn > 0f) drawDots(canvas, cx, cy, numPages, pos, d, dotsIn, GlowGlass.ON_GLASS)
                 if (searchAlpha > 0f) drawSearchLabel(view, canvas, rect, d, searchAlpha)
             }
             STYLE_LINE -> {
@@ -163,6 +171,7 @@ object GlowPageIndicator {
                 val trackWidth = min(numPages * 18f * d, 140f * d)
                 val h = 3f * d
                 rect.set(cx - trackWidth / 2f, cy - h / 2f, cx + trackWidth / 2f, cy + h / 2f)
+                dotPaint.color = bareColor(onLightWallpaper)
                 dotPaint.alpha = (90 * dotsAlpha).toInt()
                 canvas.drawRoundRect(rect, h / 2f, h / 2f, dotPaint)
                 val segment = trackWidth / numPages
@@ -176,12 +185,12 @@ object GlowPageIndicator {
                 val width = dotsWidth(numPages, d) + 24f * d
                 val h = 22f * d
                 rect.set(cx - width / 2f, cy - h / 2f, cx + width / 2f, cy + h / 2f)
-                drawPill(canvas, rect, d, dotsAlpha)
-                drawDots(canvas, cx, cy, numPages, pos, d, dotsAlpha)
+                drawPill(canvas, rect, d, dotsAlpha, onLightWallpaper)
+                drawDots(canvas, cx, cy, numPages, pos, d, dotsAlpha, GlowGlass.ON_GLASS)
             }
             else -> {
                 if (numPages < 2 || dotsAlpha <= 0f) return
-                drawDots(canvas, cx, cy, numPages, pos, d, dotsAlpha)
+                drawDots(canvas, cx, cy, numPages, pos, d, dotsAlpha, bareColor(onLightWallpaper))
             }
         }
     }
@@ -191,9 +200,13 @@ object GlowPageIndicator {
         return n * 7f * d + (n - 1) * 8f * d
     }
 
-    private fun drawPill(canvas: Canvas, r: RectF, d: Float, alpha: Float) {
-        pillFill.color = Color.argb((64 * alpha).toInt(), 255, 255, 255)
-        pillStroke.color = Color.argb((80 * alpha).toInt(), 255, 255, 255)
+    /** Dots drawn straight on the wallpaper: white, or dark over a light wallpaper. */
+    private fun bareColor(onLightWallpaper: Boolean): Int =
+        if (onLightWallpaper) GlowGlass.ON_LIGHT_WALLPAPER else GlowGlass.ON_GLASS
+
+    private fun drawPill(canvas: Canvas, r: RectF, d: Float, alpha: Float, onLightWallpaper: Boolean) {
+        pillFill.color = GlowGlass.fillColor(GlowGlass.Level.PILL, onLightWallpaper, alpha)
+        pillStroke.color = GlowGlass.strokeColor(GlowGlass.Level.PILL, alpha)
         pillStroke.strokeWidth = max(1f, 0.8f * d)
         val radius = r.height() / 2f
         canvas.drawRoundRect(r, radius, radius, pillFill)
@@ -208,7 +221,9 @@ object GlowPageIndicator {
         pos: Float,
         d: Float,
         alpha: Float,
+        color: Int,
     ) {
+        dotPaint.color = color
         val radius = 3.5f * d
         val step = 7f * d + 8f * d
         var x = cx - step * (numPages - 1) / 2f

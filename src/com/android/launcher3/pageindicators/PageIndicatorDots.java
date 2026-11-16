@@ -27,7 +27,6 @@ import android.animation.ValueAnimator;
 import android.animation.ValueAnimator.AnimatorUpdateListener;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
@@ -172,12 +171,6 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
 
         mPaginationPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaginationPaint.setStyle(Style.FILL);
-        // Glow: frosted capsule behind the dots
-        mCapsuleFillPaint.setStyle(Style.FILL);
-        mCapsuleFillPaint.setColor(Color.argb(56, 255, 255, 255));
-        mCapsuleStrokePaint.setStyle(Style.STROKE);
-        mCapsuleStrokePaint.setColor(Color.argb(90, 255, 255, 255));
-        mCapsuleStrokePaint.setStrokeWidth(getResources().getDisplayMetrics().density);
         mPaginationPaint.setColor(ColorTokens.pageIndicatorDotColor.resolveColor(context));
         mDotRadius = getResources().getDimension(R.dimen.page_indicator_dot_size) / 2;
         mGapWidth = getResources().getDimension(R.dimen.page_indicator_gap_width);
@@ -495,35 +488,17 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
         onDrawDots(canvas);
     }
 
-    private final Paint mCapsuleFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint mCapsuleStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final RectF mCapsuleRect = new RectF();
-
-    /** Glow: draws a frosted glass capsule sized to the dots, centered at {@code centerY}. */
-    private void drawGlowCapsule(Canvas canvas, float centerY) {
-        float dotsWidth = Math.abs(mCircleGap) * (mNumPages - 1) + mDotRadius * 4;
-        float padH = mDotRadius * 4;
-        float padV = mDotRadius * 2.5f;
-        float halfWidth = dotsWidth / 2 + padH;
-        float halfHeight = mDotRadius + padV;
-        float centerX = getWidth() / 2f;
-        mCapsuleRect.set(centerX - halfWidth, centerY - halfHeight,
-                centerX + halfWidth, centerY + halfHeight);
-        // Fade the capsule together with the dots (auto-hide on the home screen)
-        float fade = mPaginationPaint.getAlpha() / 255f;
-        mCapsuleFillPaint.setAlpha(Math.round(56 * fade));
-        mCapsuleStrokePaint.setAlpha(Math.round(90 * fade));
-        canvas.drawRoundRect(mCapsuleRect, halfHeight, halfHeight, mCapsuleFillPaint);
-        canvas.drawRoundRect(mCapsuleRect, halfHeight, halfHeight, mCapsuleStrokePaint);
-    }
-
     // Glow: style of the home screen indicator (null for folders and other indicators)
     @Nullable private String mGlowStyle;
+    // Glow: the wallpaper behind the home screen is light, so glass and dots go dark
+    private boolean mGlowOnLightWallpaper;
     private final RectF mGlowTouchRect = new RectF();
 
     /** Glow: the indicator of the home screen uses a selectable style. */
     public void setGlowHomeIndicator(boolean isHome) {
         mGlowStyle = isHome ? app.lawnchair.views.GlowPageIndicator.getStyle(getContext()) : null;
+        mGlowOnLightWallpaper = isHome
+                && app.lawnchair.views.GlowGlass.isLightWallpaper(getContext());
         invalidate();
     }
 
@@ -563,7 +538,7 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
             float dotsAlpha = (mShouldAutoHide && mTotalScroll == 0)
                     ? 0f : mPaginationPaint.getAlpha() / 255f;
             app.lawnchair.views.GlowPageIndicator.draw(this, canvas, mGlowStyle, mNumPages,
-                    mCurrentPosition, dotsAlpha, mIsRtl);
+                    mCurrentPosition, dotsAlpha, mIsRtl, mGlowOnLightWallpaper);
             return;
         }
         if (mNumPages < 2) {
@@ -578,8 +553,6 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
         float circleGap = mCircleGap;
         float x = ((float) getWidth() / 2) - (mCircleGap * ((float) mNumPages - 1) / 2);
         float y = getHeight() / 2;
-
-        drawGlowCapsule(canvas, y);
 
         // Save the current alpha value, so we can reset to it again after drawing the dots
         int alpha = mPaginationPaint.getAlpha();

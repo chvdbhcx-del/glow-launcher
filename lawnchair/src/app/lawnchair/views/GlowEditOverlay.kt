@@ -71,6 +71,9 @@ class GlowEditOverlay @JvmOverloads constructor(
     private val doneButton: TextView
     private var menu: Dialog? = null
 
+    /** Where the running show / hide fade is heading, null when none is running. */
+    private var fadingTo: Boolean? = null
+
     init {
         visibility = GONE
         clipChildren = false
@@ -127,26 +130,31 @@ class GlowEditOverlay @JvmOverloads constructor(
             clipToOutline = true
         }
         val items = listOf<Triple<Int, Int, () -> Unit>>(
-            Triple(R.string.glow_add_widget, R.drawable.ic_widget) { launcher.openWidgetPicker() },
+            Triple(R.string.glow_add_widget, R.drawable.ic_glow_widgets) { launcher.openWidgetPicker() },
             Triple(R.string.glow_customize, R.drawable.ic_glow_customize) {
                 GlowCustomizeSheet(launcher).show()
             },
-            Triple(R.string.glow_change_wallpaper, R.drawable.ic_wallpaper) {
+            Triple(R.string.glow_change_wallpaper, R.drawable.ic_glow_wallpaper) {
                 launcher.startActivity(Intent(launcher, GlowWallpaperActivity::class.java))
             },
-            Triple(R.string.glow_themes, R.drawable.ic_palette) {
+            Triple(R.string.glow_themes, R.drawable.ic_glow_themes) {
                 launcher.startActivity(Intent(launcher, GlowThemesActivity::class.java))
             },
             Triple(R.string.glow_update_check, R.drawable.ic_glow_update) {
                 app.lawnchair.update.GlowUpdater.checkNow(launcher)
             },
-            Triple(R.string.glow_launcher_settings, R.drawable.ic_setting) {
+            Triple(R.string.glow_launcher_settings, R.drawable.ic_glow_settings) {
                 launcher.startActivity(PreferenceActivity.createIntent(launcher, Root))
             },
         )
             // Play and local builds don't update themselves
             .filter { it.first != R.string.glow_update_check || app.lawnchair.update.GlowUpdater.isSupported() }
-        val dialog = Dialog(launcher)
+        val dialog = object : Dialog(launcher) {
+            // Tap outside or Back: shrink back into the "Edit" pill instead of vanishing
+            override fun cancel() {
+                if (!animateMenu(list, editButton, show = false) { super.cancel() }) super.cancel()
+            }
+        }
         items.forEachIndexed { index, (label, icon, action) ->
             if (index > 0) {
                 list.addView(
@@ -159,6 +167,7 @@ class GlowEditOverlay @JvmOverloads constructor(
             }
             list.addView(
                 menuRow(label, icon) {
+                    // Close at once: the action may open a sheet or another screen
                     dialog.dismiss()
                     action()
                 },
@@ -181,7 +190,8 @@ class GlowEditOverlay @JvmOverloads constructor(
                 x = if (rtl) loc[0] + editButton.width - dp(250) else loc[0]
                 y = loc[1] + editButton.height - touchInset() + dp(8)
                 dimAmount = 0.12f
-                windowAnimations = android.R.style.Animation_Dialog
+                // The menu grows out of the "Edit" pill (see animateMenu), not from the centre
+                windowAnimations = 0
             }
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             if (canBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -191,6 +201,40 @@ class GlowEditOverlay @JvmOverloads constructor(
         dialog.setOnDismissListener { if (menu === dialog) menu = null }
         menu = dialog
         dialog.show()
+        animateMenu(list, editButton, show = true) {}
+    }
+
+    /**
+     * Grows the menu out of the "Edit" pill (or shrinks it back into it). Returns false when
+     * system animations are off, then [end] is not called and the caller acts at once.
+     */
+    private fun animateMenu(menu: View, anchor: View, show: Boolean, end: () -> Unit): Boolean {
+        if (!GlowGlass.animationsEnabled()) {
+            menu.alpha = 1f
+            return false
+        }
+        val rtl = layoutDirection == LAYOUT_DIRECTION_RTL
+        menu.animate().cancel()
+        // Pivot on the pill: the top corner of the menu that sits under it
+        menu.pivotX = if (rtl) dp(250) - anchor.width / 2f else anchor.width / 2f
+        menu.pivotY = 0f
+        if (show) {
+            menu.alpha = 0f
+            menu.scaleX = 0.6f
+            menu.scaleY = 0.6f
+            menu.animate().alpha(1f).scaleX(1f).scaleY(1f)
+                .setDuration(GlowGlass.Motion.MEDIUM)
+                .setInterpolator(GlowGlass.Motion.POP)
+                .withEndAction(end)
+                .start()
+        } else {
+            menu.animate().alpha(0f).scaleX(0.6f).scaleY(0.6f)
+                .setDuration(GlowGlass.Motion.SHORT)
+                .setInterpolator(GlowGlass.Motion.EXIT)
+                .withEndAction(end)
+                .start()
+        }
+        return true
     }
 
     private fun menuRow(@StringRes label: Int, @DrawableRes icon: Int, onClick: () -> Unit) =
@@ -225,12 +269,6 @@ class GlowEditOverlay @JvmOverloads constructor(
             )
         }
 
-    private fun glassBackground(radius: Float, fillAlpha: Int = 64) = GradientDrawable().apply {
-        setColor(Color.argb(fillAlpha, 255, 255, 255))
-        cornerRadius = radius
-        setStroke(dp(1).coerceAtLeast(1), Color.argb(90, 255, 255, 255))
-    }
-
     private fun dp(value: Int): Int = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP,
         value.toFloat(),
@@ -243,14 +281,16 @@ class GlowEditOverlay @JvmOverloads constructor(
 
     override fun onDragStart(dragObject: DropTarget.DragObject, options: DragOptions) {
         animate().cancel()
-        animate().alpha(0f).setDuration(FADE_DURATION).start()
+        fadingTo = null
+        animate().alpha(0f).setDuration(FADE_DURATION).setInterpolator(GlowGlass.Motion.EXIT).start()
     }
 
     override fun onDragEnd() {
         if (launcher.isInState(LauncherState.EDIT_MODE) || visibility == VISIBLE) {
             animate().cancel()
+            fadingTo = null
             animate().alpha(if (launcher.stateManager.state == LauncherState.EDIT_MODE) 1f else 0f)
-                .setDuration(FADE_DURATION).start()
+                .setDuration(FADE_DURATION).setInterpolator(GlowGlass.Motion.STANDARD).start()
         }
     }
 
@@ -281,17 +321,36 @@ class GlowEditOverlay @JvmOverloads constructor(
         val show = state == LauncherState.EDIT_MODE
         GlowEditMode.setActive(launcher, show)
         if (!show) menu?.dismiss()
+        // The state "complete" callback must not cut short a fade that is heading the same way
+        if (!animate && fadingTo == show) return
         animate().cancel()
+        fadingTo = null
+        val animated = animate && GlowGlass.animationsEnabled()
         if (show) {
             if (visibility != VISIBLE) {
-                alpha = if (animate) 0f else 1f
+                alpha = if (animated) 0f else 1f
+                // The pills drop in from the status bar
+                translationY = if (animated) -dp(10).toFloat() else 0f
                 visibility = VISIBLE
             }
-            if (animate) animate().alpha(1f).setDuration(FADE_DURATION).start() else alpha = 1f
+            if (animated) {
+                fadingTo = true
+                animate().alpha(1f).translationY(0f).setDuration(FADE_DURATION + 60)
+                    .setInterpolator(GlowGlass.Motion.ENTER)
+                    .withEndAction { fadingTo = null }.start()
+            } else {
+                alpha = 1f
+                translationY = 0f
+            }
         } else if (visibility == VISIBLE) {
-            if (animate) {
-                animate().alpha(0f).setDuration(FADE_DURATION)
-                    .withEndAction { visibility = GONE }.start()
+            if (animated) {
+                fadingTo = false
+                animate().alpha(0f).translationY(-dp(10).toFloat()).setDuration(FADE_DURATION)
+                    .setInterpolator(GlowGlass.Motion.EXIT)
+                    .withEndAction {
+                        fadingTo = null
+                        visibility = GONE
+                    }.start()
             } else {
                 alpha = 0f
                 visibility = GONE

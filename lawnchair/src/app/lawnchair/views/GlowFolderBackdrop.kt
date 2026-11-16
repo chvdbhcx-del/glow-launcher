@@ -23,7 +23,6 @@ import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.view.View
-import android.view.animation.DecelerateInterpolator
 import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherState
 import java.lang.ref.WeakReference
@@ -92,7 +91,8 @@ object GlowFolderBackdrop {
         val ref = WeakReference(launcher)
         animator = ValueAnimator.ofFloat(progress, target).apply {
             this.duration = duration
-            interpolator = DecelerateInterpolator()
+            // Same curves as the rest of Glow: soft landing on open, steady clear on close
+            interpolator = if (target > progress) GlowGlass.Motion.ENTER else GlowGlass.Motion.STANDARD
             addUpdateListener {
                 val l = ref.get()
                 if (l == null || l.isDestroyed) it.cancel() else apply(l, it.animatedValue as Float)

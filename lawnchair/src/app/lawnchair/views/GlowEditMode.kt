@@ -16,6 +16,9 @@
 
 package app.lawnchair.views
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.TimeAnimator
 import android.animation.ValueAnimator
 import android.app.AlertDialog
 import android.content.Intent
@@ -29,7 +32,6 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.accessibility.AccessibilityManager
-import android.view.animation.LinearInterpolator
 import androidx.core.view.ViewCompat
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.CellLayout
@@ -69,7 +71,14 @@ object GlowEditMode {
     private const val WIDGET_DEGREES = 0.45f
     private const val BADGE_FADE_MS = 180L
 
-    private var jiggle: ValueAnimator? = null
+    private const val RAMP_IN_MS = 220L
+    private const val RAMP_OUT_MS = 160L
+
+    private var jiggle: TimeAnimator? = null
+
+    /** 0..1, how far the items swing; ramps in and out with the edit mode. */
+    private var jiggleAmount = 0f
+    private var jiggleRamp: ValueAnimator? = null
     private var launcherRef: WeakReference<Launcher>? = null
 
     /** 0 = badges hidden, 1 = fully shown. Animated together with the state. */
@@ -105,34 +114,81 @@ object GlowEditMode {
     fun setActive(launcher: Launcher, active: Boolean) {
         if (launcherRef?.get() !== launcher) {
             // A new launcher instance (recreated after a theme or grid change): drop the old one
-            jiggle?.cancel()
-            jiggle = null
+            stopJiggle()
         }
         launcherRef = WeakReference(launcher)
         animateBadges(launcher, if (active) 1f else 0f)
         if (active) {
             updateRemoveActions(launcher, true)
-            if (jiggle?.isRunning == true || !shouldJiggle(launcher)) return
-            val ref = WeakReference(launcher)
-            jiggle = ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 1000
-                repeatCount = ValueAnimator.INFINITE
-                interpolator = LinearInterpolator()
-                addUpdateListener {
-                    val l = ref.get()
-                    if (l == null || l.isDestroyed) it.cancel() else applyJiggle(l, it.currentPlayTime)
+            if (!shouldJiggle(launcher)) return
+            if (jiggle == null) {
+                val ref = WeakReference(launcher)
+                // TimeAnimator: one continuous clock, so the wave never jumps between cycles
+                jiggle = TimeAnimator().apply {
+                    setTimeListener { animator, totalTime, _ ->
+                        val l = ref.get()
+                        if (l == null || l.isDestroyed) animator.cancel() else applyJiggle(l, totalTime)
+                    }
+                    start()
                 }
-                start()
             }
+            // The wiggle swells in instead of starting at full swing
+            rampJiggle(1f, RAMP_IN_MS) {}
         } else {
-            jiggle?.cancel()
-            jiggle = null
             updateRemoveActions(launcher, false)
-            forEachContainer(launcher) { container ->
-                for (i in 0 until container.childCount) {
-                    container.getChildAt(i).rotation = 0f
-                }
+            if (jiggle == null) {
+                resetRotation(launcher)
+                return
             }
+            // ...and settles down smoothly instead of snapping back
+            val ref = WeakReference(launcher)
+            rampJiggle(0f, RAMP_OUT_MS) {
+                stopJiggle()
+                ref.get()?.let { resetRotation(it) }
+            }
+        }
+    }
+
+    private fun rampJiggle(target: Float, duration: Long, onEnd: () -> Unit) {
+        jiggleRamp?.cancel()
+        if (!GlowGlass.animationsEnabled() || jiggleAmount == target) {
+            jiggleAmount = target
+            onEnd()
+            return
+        }
+        jiggleRamp = ValueAnimator.ofFloat(jiggleAmount, target).apply {
+            this.duration = duration
+            interpolator = GlowGlass.Motion.STANDARD
+            addUpdateListener { jiggleAmount = it.animatedValue as Float }
+            addListener(object : AnimatorListenerAdapter() {
+                private var canceled = false
+                override fun onAnimationCancel(animation: Animator) {
+                    canceled = true
+                }
+
+                override fun onAnimationEnd(animation: Animator) {
+                    if (jiggleRamp === animation) jiggleRamp = null
+                    if (!canceled) onEnd()
+                }
+            })
+            start()
+        }
+    }
+
+    private fun stopJiggle() {
+        jiggleRamp?.cancel()
+        jiggleRamp = null
+        jiggle?.cancel()
+        jiggle = null
+        jiggleAmount = 0f
+    }
+
+    private fun resetRotation(launcher: Launcher) {
+        forEachContainer(launcher) { container ->
+            for (i in 0 until container.childCount) {
+                container.getChildAt(i).rotation = 0f
+            }
+            container.invalidate()
         }
     }
 
@@ -140,8 +196,7 @@ object GlowEditMode {
     @JvmStatic
     fun onLauncherDestroyed(launcher: Launcher) {
         if (launcherRef?.get() !== launcher) return
-        jiggle?.cancel()
-        jiggle = null
+        stopJiggle()
         badgeAnim?.cancel()
         badgeAnim = null
         badgeProgress = 0f
@@ -183,7 +238,8 @@ object GlowEditMode {
     private fun animateBadges(launcher: Launcher, target: Float) {
         badgeAnim?.cancel()
         badgeAnim = ValueAnimator.ofFloat(badgeProgress, target).apply {
-            duration = BADGE_FADE_MS
+            duration = if (GlowGlass.animationsEnabled()) BADGE_FADE_MS else 0L
+            interpolator = if (target > badgeProgress) GlowGlass.Motion.POP else GlowGlass.Motion.EXIT
             val ref = WeakReference(launcher)
             addUpdateListener {
                 badgeProgress = it.animatedValue as Float
@@ -206,7 +262,7 @@ object GlowEditMode {
                 // Neighbouring items move in opposite directions with a small offset,
                 // so the grid looks alive instead of rocking as one block.
                 val offset = (index % 2) * PI.toFloat() + (index % 3) * 0.45f
-                child.rotation = amplitude * sin(phase + offset)
+                child.rotation = jiggleAmount * amplitude * sin(phase + offset)
                 index++
             }
             // The "−" badges are drawn by the container and follow each child's rotation
@@ -266,10 +322,12 @@ object GlowEditMode {
         val progress = badgeProgress
         if (progress <= 0f) return
         val d = container.resources.displayMetrics.density
+        // The badge pops in (the scale may overshoot a little), the colour only fades
         val radius = 11f * d * (0.6f + 0.4f * progress)
-        val alpha = (255 * progress).toInt()
-        fillPaint.color = Color.argb((235 * progress).toInt(), 236, 236, 242)
-        strokePaint.color = Color.argb((60 * progress).toInt(), 0, 0, 0)
+        val fade = progress.coerceIn(0f, 1f)
+        val alpha = (255 * fade).toInt()
+        fillPaint.color = Color.argb((235 * fade).toInt(), 236, 236, 242)
+        strokePaint.color = Color.argb((60 * fade).toInt(), 0, 0, 0)
         strokePaint.strokeWidth = 0.75f * d
         minusPaint.color = Color.argb(alpha, 40, 40, 48)
         minusPaint.strokeWidth = 2f * d

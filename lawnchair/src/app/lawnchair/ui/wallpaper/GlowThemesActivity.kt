@@ -39,6 +39,7 @@ import app.lawnchair.preferences2.PreferenceManager2
 import app.lawnchair.theme.color.ColorOption
 import app.lawnchair.ui.preferences.PreferenceActivity
 import app.lawnchair.ui.preferences.navigation.General
+import app.lawnchair.views.GlowGlass
 import com.android.launcher3.R
 import com.patrykmichalik.opto.core.setBlocking
 import java.util.concurrent.Executors
@@ -61,7 +62,9 @@ class GlowThemesActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = Color.WHITE
         window.navigationBarColor = Color.WHITE
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        // Dark status and navigation bar icons on the white page
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -218,7 +221,7 @@ class GlowThemesActivity : Activity() {
     ).toInt()
 
     companion object {
-        private val ACCENT = Color.rgb(0xB1, 0x4F, 0xE8)
+        private val ACCENT = GlowGlass.ACCENT
 
         private val THEMES = listOf(
             GlowTheme(R.string.glow_theme_violet, R.drawable.glow_wallpaper_violet, Color.rgb(0xB1, 0x4F, 0xE8)),

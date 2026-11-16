@@ -28,6 +28,9 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.animation.Interpolator
+import android.view.animation.OvershootInterpolator
+import android.view.animation.PathInterpolator
 import android.widget.Button
 import android.widget.TextView
 import com.android.launcher3.R
@@ -45,6 +48,27 @@ import kotlin.math.max
 object GlowGlass {
 
     const val ACCENT = 0xFFB14FE8.toInt()
+
+    /** Text and glyphs on glass. */
+    const val ON_GLASS = 0xFFFFFFFF.toInt()
+
+    /** Dark glyphs (page dots) drawn straight on a light wallpaper. */
+    const val ON_LIGHT_WALLPAPER = 0xFF1E1828.toInt()
+
+    /**
+     * Glow motion tokens. Everything that opens uses [ENTER] (fast start, long soft
+     * landing), everything that closes uses [EXIT]; small pop-ups get [POP].
+     */
+    object Motion {
+        const val SHORT = 150L
+        const val MEDIUM = 240L
+        const val LONG = 320L
+
+        @JvmField val ENTER: Interpolator = PathInterpolator(0.05f, 0.7f, 0.1f, 1f)
+        @JvmField val EXIT: Interpolator = PathInterpolator(0.3f, 0f, 0.8f, 0.15f)
+        @JvmField val STANDARD: Interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+        @JvmField val POP: Interpolator = OvershootInterpolator(1.1f)
+    }
 
     /** Minimum touch target recommended by Android accessibility guidelines. */
     const val MIN_TOUCH_DP = 48
@@ -73,16 +97,26 @@ object GlowGlass {
         val light = isLightWallpaper(context)
         return GradientDrawable().apply {
             cornerRadius = radiusPx
-            setColor(
-                if (light) {
-                    Color.argb(level.darkAlpha, 22, 16, 32)
-                } else {
-                    Color.argb(level.lightAlpha, 255, 255, 255)
-                },
-            )
-            setStroke(max(1, dp(context, 1)), Color.argb(level.strokeAlpha, 255, 255, 255))
+            setColor(fillColor(level, light))
+            setStroke(max(1, dp(context, 1)), strokeColor(level))
         }
     }
+
+    /** Fill of the glass [level]: white frost on dark wallpapers, a dark tint on light ones. */
+    @JvmStatic
+    @JvmOverloads
+    fun fillColor(level: Level, onLightWallpaper: Boolean, alpha: Float = 1f): Int =
+        if (onLightWallpaper) {
+            Color.argb((level.darkAlpha * alpha).toInt(), 22, 16, 32)
+        } else {
+            Color.argb((level.lightAlpha * alpha).toInt(), 255, 255, 255)
+        }
+
+    /** The thin light rim every glass surface has. */
+    @JvmStatic
+    @JvmOverloads
+    fun strokeColor(level: Level, alpha: Float = 1f): Int =
+        Color.argb((level.strokeAlpha * alpha).toInt(), 255, 255, 255)
 
     /**
      * A glass pill with a [heightDp] visual height but a touch area of at least 48dp:

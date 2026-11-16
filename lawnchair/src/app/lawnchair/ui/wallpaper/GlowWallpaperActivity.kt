@@ -36,6 +36,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.DrawableRes
+import app.lawnchair.views.GlowGlass
 import com.android.launcher3.R
 import java.util.concurrent.Executors
 
@@ -51,7 +52,9 @@ class GlowWallpaperActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = Color.WHITE
         window.navigationBarColor = Color.WHITE
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        // Dark status and navigation bar icons on the white page
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -169,7 +172,7 @@ class GlowWallpaperActivity : Activity() {
     ).toInt()
 
     companion object {
-        private val ACCENT = Color.rgb(0xB1, 0x4F, 0xE8)
+        private val ACCENT = GlowGlass.ACCENT
 
         private val WALLPAPERS = listOf(
             R.drawable.glow_wallpaper_violet,

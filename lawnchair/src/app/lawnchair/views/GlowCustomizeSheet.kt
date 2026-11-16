@@ -126,7 +126,9 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
                 typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                 gravity = Gravity.CENTER
                 maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
+                // Five tabs share one row: long labels ("Страницы") shrink a little instead of
+                // being cut off with "…"
+                setAutoSizeTextTypeUniformWithConfiguration(10, 13, 1, TypedValue.COMPLEX_UNIT_SP)
                 isFocusable = true
                 setOnClickListener { selectTab(index) }
                 GlowGlass.asButton(this)
@@ -163,7 +165,13 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
 
     fun dismiss() = dialog.dismiss()
 
+    private var selectedTab = -1
+    private var currentPage: View? = null
+
     private fun selectTab(index: Int) {
+        if (index == selectedTab) return
+        val previous = selectedTab
+        selectedTab = index
         tabs.forEachIndexed { i, tab ->
             tab.isSelected = i == index
             tab.background = if (i == index) {
@@ -175,16 +183,36 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
                 null
             }
         }
-        content.removeAllViews()
-        content.addView(
-            when (index) {
-                0 -> iconsPage()
-                1 -> shapePage()
-                2 -> sizePage()
-                3 -> gridPage()
-                else -> indicatorPage()
-            },
-        )
+        val page = when (index) {
+            0 -> iconsPage()
+            1 -> shapePage()
+            2 -> sizePage()
+            3 -> gridPage()
+            else -> indicatorPage()
+        }
+        // Pages still fading out from an earlier quick tap go at once; only the current one fades
+        val old = currentPage
+        for (i in content.childCount - 1 downTo 0) {
+            val child = content.getChildAt(i)
+            if (child !== old) content.removeView(child)
+        }
+        currentPage = page
+        content.addView(page)
+        if (old == null || previous < 0 || !GlowGlass.animationsEnabled()) {
+            old?.let { content.removeView(it) }
+            return
+        }
+        // The new page slides in from the side of the tab that was tapped
+        val shift = dp(24).toFloat() * (if (index > previous) 1 else -1) *
+            (if (content.layoutDirection == View.LAYOUT_DIRECTION_RTL) -1 else 1)
+        old.animate().cancel()
+        old.animate().alpha(0f).translationX(-shift).setDuration(GlowGlass.Motion.SHORT)
+            .setInterpolator(GlowGlass.Motion.EXIT)
+            .withEndAction { content.removeView(old) }.start()
+        page.alpha = 0f
+        page.translationX = shift
+        page.animate().alpha(1f).translationX(0f).setDuration(GlowGlass.Motion.MEDIUM)
+            .setInterpolator(GlowGlass.Motion.ENTER).start()
     }
 
     // ---------------------------------------------------------------------------------------
@@ -390,6 +418,14 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
         options.forEach { option ->
             option.findViewWithTag<View>(TAG_FRAME)?.background = optionBackground(option === selected)
         }
+        // A small "tap" pop on the chosen option
+        val frame = selected.findViewWithTag<View>(TAG_FRAME) ?: return
+        if (!GlowGlass.animationsEnabled()) return
+        frame.animate().cancel()
+        frame.scaleX = 0.9f
+        frame.scaleY = 0.9f
+        frame.animate().scaleX(1f).scaleY(1f).setDuration(GlowGlass.Motion.MEDIUM)
+            .setInterpolator(GlowGlass.Motion.POP).start()
     }
 
     private fun optionBackground(selected: Boolean) = GradientDrawable().apply {
@@ -474,6 +510,6 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
     companion object {
         private const val SHEET_CONTENT_HEIGHT = 104
         private const val TAG_FRAME = "glow_option_frame"
-        private val ACCENT = Color.rgb(0xB1, 0x4F, 0xE8)
+        private val ACCENT = GlowGlass.ACCENT
     }
 }
