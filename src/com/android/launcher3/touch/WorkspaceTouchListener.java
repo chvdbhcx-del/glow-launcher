@@ -20,11 +20,13 @@ package com.android.launcher3.touch;
 import static android.view.MotionEvent.ACTION_CANCEL;
 import static android.view.MotionEvent.ACTION_DOWN;
 import static android.view.MotionEvent.ACTION_MOVE;
+import static android.view.MotionEvent.ACTION_POINTER_DOWN;
 import static android.view.MotionEvent.ACTION_POINTER_UP;
 import static android.view.MotionEvent.ACTION_UP;
 
 import static com.android.launcher3.LauncherState.ALL_APPS;
 import static com.android.launcher3.LauncherState.NORMAL;
+import static com.android.launcher3.LauncherState.EDIT_MODE;
 import static com.android.launcher3.Utilities.shouldEnableMouseInteractionChanges;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_ALLAPPS_CLOSE_TAP_OUTSIDE;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_SPLIT_SELECTION_EXIT_INTERRUPTED;
@@ -55,6 +57,7 @@ import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.util.TouchUtil;
 
 import app.lawnchair.LawnchairLauncher;
+import app.lawnchair.views.GlowEditOverlay;
 
 /**
  * Helper class to handle touch on empty space in workspace and show options popup on long press
@@ -102,6 +105,7 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
         if (action == ACTION_DOWN) {
             mDoubleTapPending = false;
         }
+        trackEditModeTap(ev, action);
 
         mGestureDetector.onTouchEvent(ev);
 
@@ -218,6 +222,34 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
         return result;
     }
 
+    // Glow: a plain tap on empty home screen space leaves the iOS-style edit mode
+    private boolean mEditTapCandidate;
+    private final PointF mEditTapDown = new PointF();
+
+    private void trackEditModeTap(MotionEvent ev, int action) {
+        if (action == ACTION_DOWN) {
+            mEditTapCandidate = mLauncher.isInState(EDIT_MODE)
+                    && AbstractFloatingView.getTopOpenView(mLauncher) == null;
+            mEditTapDown.set(ev.getX(), ev.getY());
+        } else if (!mEditTapCandidate) {
+            return;
+        } else if (action == ACTION_MOVE) {
+            if (PointF.length(mEditTapDown.x - ev.getX(), mEditTapDown.y - ev.getY())
+                    > mTouchSlop) {
+                mEditTapCandidate = false;
+            }
+        } else if (action == ACTION_UP) {
+            mEditTapCandidate = false;
+            if (!mWorkspace.isHandlingTouch()
+                    && ev.getEventTime() - ev.getDownTime() < 500
+                    && mLauncher.isInState(EDIT_MODE)) {
+                mLauncher.getStateManager().goToState(NORMAL);
+            }
+        } else if (action == ACTION_CANCEL || action == ACTION_POINTER_DOWN) {
+            mEditTapCandidate = false;
+        }
+    }
+
     private boolean canHandleLongPress() {
         return AbstractFloatingView.getTopOpenView(mLauncher) == null
                 && mLauncher.isInState(NORMAL);
@@ -247,7 +279,11 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
                 mWorkspace.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS,
                         HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
                 mLauncher.getStatsLogManager().logger().log(LAUNCHER_WORKSPACE_LONGPRESS);
-                mLauncher.showDefaultOptions(mTouchDownPoint.x, mTouchDownPoint.y);
+                if (GlowEditOverlay.shouldEnterEditModeOnLongPress(mLauncher)) {
+                    mLauncher.getStateManager().goToState(EDIT_MODE);
+                } else {
+                    mLauncher.showDefaultOptions(mTouchDownPoint.x, mTouchDownPoint.y);
+                }
                 if (mLauncher.isSplitSelectionActive()) {
                     mLauncher.dismissSplitSelection(LAUNCHER_SPLIT_SELECTION_EXIT_INTERRUPTED);
                 }

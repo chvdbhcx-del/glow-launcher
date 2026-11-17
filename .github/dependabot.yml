@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # Keeps the CI actions (checkout, setup-java, setup-gradle, upload-artifact) up to date
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

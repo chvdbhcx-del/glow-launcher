@@ -1,0 +1,22 @@
+Glow Launcher
+Copyright 2026 Glow Launcher contributors
+
+This product is a modified version of Lawnchair
+(https://github.com/LawnchairLauncher/lawnchair), Copyright Lawnchair,
+which is based on the Android Open Source Project Launcher3,
+Copyright The Android Open Source Project.
+
+Licensed under the Apache License, Version 2.0 (see LICENSE.txt).
+
+Modifications by Glow Launcher contributors:
+- rebranding (name, icon, application ID) and Glow default theme;
+- disabled Lawnchair network announcements and the nightly auto-updater;
+- new Glow code under lawnchair/src/app/lawnchair (files named Glow*): App Library,
+  iOS-style edit mode, Customize sheet, page indicator styles, folder backdrop,
+  wallpapers and themes, app lock, extra gestures, in-app updater;
+- changes to Launcher3 files, each marked with a "Glow:" comment: Hotseat, Workspace,
+  PagedView, ShortcutAndWidgetContainer, CellLayout-related touch handling
+  (WorkspaceTouchListener, ItemClickHandler), Folder, ActivityAllAppsContainerView,
+  AllAppsTransitionController, PageIndicatorDots, EditModeState, ActivityContext,
+  OptionsPopupView, WorkspaceStateTransitionAnimation;
+- CI workflows (build, signed release).

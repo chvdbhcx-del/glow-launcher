@@ -404,6 +404,14 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         setPageIndicatorInset();
     }
 
+    @Override
+    protected void onPulledPastLastPage() {
+        // Glow: like iOS, swiping left past the last home screen opens the App Library
+        if (mLauncher.isInState(LauncherState.NORMAL) && !mLauncher.isWorkspaceLocked()) {
+            mLauncher.getStateManager().goToState(LauncherState.ALL_APPS);
+        }
+    }
+
     private void setPageIndicatorInset() {
         DeviceProfile grid = mLauncher.getDeviceProfile();
 
@@ -419,6 +427,15 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             lp.leftMargin = lp.rightMargin = 0;
             lp.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
             lp.bottomMargin = grid.hotseatBarSizePx - grid.workspaceCellPaddingXPx;
+            // Glow: keep the page dots clear of the search pill that now sits on top of the dock
+            lp.bottomMargin += Math.round(10 * getResources().getDisplayMetrics().density);
+        }
+        if (mPageIndicator instanceof com.android.launcher3.pageindicators.PageIndicatorDots dots) {
+            dots.setGlowHomeIndicator(true);
+            int glowHeight = app.lawnchair.views.GlowPageIndicator.getViewHeight(
+                    getContext(), dots.getGlowStyle());
+            lp.height = glowHeight > 0 ? glowHeight
+                    : getResources().getDimensionPixelSize(R.dimen.workspace_page_indicator_height);
         }
         mPageIndicator.setLayoutParams(lp);
     }

@@ -27,4 +27,6 @@
     <item type="id" name="qsbIconTintSecondary" />
     <item type="id" name="qsbIconTintTertiary" />
     <item type="id" name="qsbIconTintQuaternary" />
+    <!-- Glow: page strip removed from launcher.xml; id kept so Launcher.java still compiles -->
+    <item name="edit_mode_page_strip" type="id" />
 </resources>

@@ -16,6 +16,7 @@
 
 package app.lawnchair
 
+import app.lawnchair.applock.GlowAppLock
 import android.animation.AnimatorSet
 import android.app.ActivityOptions
 import android.content.Context
@@ -283,7 +284,7 @@ class LawnchairLauncher : QuickstepLauncher() {
         super.getSupportedShortcuts(container),
         Stream.concat(
             Stream.of(LawnchairShortcut.UNINSTALL, LawnchairShortcut.CUSTOMIZE, LawnchairShortcut.OPEN_IN_STORE),
-            Stream.of(LawnchairShortcut.PAUSE_APPS),
+            Stream.of(LawnchairShortcut.PAUSE_APPS, GlowAppLock.LOCK, GlowAppLock.SHARE),
         ),
     )
 
@@ -470,6 +471,7 @@ class LawnchairLauncher : QuickstepLauncher() {
     override fun onResume() {
         super.onResume()
         restartIfPending()
+        app.lawnchair.update.GlowUpdater.maybeAutoCheck(this)
         refreshPredictionContainersFromModel()
 
         dragLayer.viewTreeObserver.addOnDrawListener(
@@ -498,6 +500,9 @@ class LawnchairLauncher : QuickstepLauncher() {
     }
 
     override fun onDestroy() {
+        // Glow: drop the edit mode and folder backdrop state tied to this instance
+        app.lawnchair.views.GlowEditMode.onLauncherDestroyed(this)
+        app.lawnchair.views.GlowFolderBackdrop.onLauncherDestroyed(this)
         super.onDestroy()
         // Only actually closes if required, safe to call if not enabled
         SmartspacerClient.close()

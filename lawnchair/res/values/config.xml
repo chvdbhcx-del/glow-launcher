@@ -65,16 +65,16 @@
     <string name="config_default_qsb_search_provider_id" translatable="false">google</string>
 
     <!-- Which icon shape for application to use by default -->
-    <string name="config_default_icon_shape" translatable="false">system</string>
+    <string name="config_default_icon_shape" translatable="false">cupertino</string>
 
     <!-- Which icon shape for folder to use by default -->
-    <string name="config_default_folder_shape" translatable="false">system</string>
+    <string name="config_default_folder_shape" translatable="false">cupertino</string>
 
     <!-- Which calendar to use on smartspace by default -->
     <string name="config_default_smart_space_calendar" translatable="false">gregorian</string>
 
     <!-- which accent color to use by default -->
-    <string name="config_default_accent_color" translatable="false">no_default</string>
+    <string name="config_default_accent_color" translatable="false">custom|#ffb14fe8</string>
 
     <!-- which notification dot color to use by default -->
     <string name="config_default_notification_dot_color" translatable="false">default</string>
@@ -82,7 +82,7 @@
     <string name="config_default_folder_color" translatable="false">default</string>
 
     <!-- which hotseat bg color to use by default -->
-    <string name="config_default_hotseat_bg_color" translatable="false">default</string>
+    <string name="config_default_hotseat_bg_color" translatable="false">custom|#ffffffff</string>
 
     <!-- which app drawer bg color to use by default -->
     <string name="config_default_app_drawer_bg_color" translatable="false">default</string>
@@ -97,7 +97,7 @@
     <string name="config_default_prediction_mode" translatable="false">lawnchair</string>
 
     <!-- which hotseat mode to use by default -->
-    <string name="config_default_hotseat_mode" translatable="false">lawnchair</string>
+    <string name="config_default_hotseat_mode" translatable="false">disabled</string>
 
     <!-- which web search provider to use by default -->
     <string name="config_default_web_suggestion_provider" translatable="false">google</string>
@@ -119,7 +119,7 @@
     <bool name="config_default_always_reload_icons">true</bool>
     <bool name="config_default_dark_status_bar">false</bool>
     <bool name="config_default_show_notification_count">false</bool>
-    <bool name="config_default_themed_hotseat_qsb">true</bool>
+    <bool name="config_default_themed_hotseat_qsb">false</bool>
     <bool name="config_default_dock_search_bar_force_website">false</bool>
     <bool name="config_default_rounded_widgets">true</bool>
     <bool name="config_default_allow_widget_overlap">false</bool>
@@ -147,24 +147,24 @@
     <bool name="config_default_show_icon_labels_on_home_screen">true</bool>
     <bool name="config_default_show_icon_labels_in_drawer">true</bool>
     <bool name="config_default_enable_fuzzy_search">false</bool>
-    <bool name="config_default_enable_smartspace">true</bool>
+    <bool name="config_default_enable_smartspace">false</bool>
     <bool name="config_default_enable_feed">false</bool>
     <bool name="config_default_enable_icon_selection">false</bool>
     <bool name="config_default_show_component_names">false</bool>
     <bool name="config_default_smartspace_show_date">true</bool>
     <bool name="config_default_smartspace_show_time">false</bool>
     <bool name="config_default_perform_wide_search">true</bool>
-    <bool name="config_default_live_information_enabled">true</bool>
-    <bool name="config_default_live_information_show_announcements">true</bool>
+    <bool name="config_default_live_information_enabled">false</bool>
+    <bool name="config_default_live_information_show_announcements">false</bool>
     <bool name="config_default_enable_dot_pagination">true</bool>
     <bool name="config_default_enable_material_u_popup">true</bool>
     <bool name="config_default_enable_two_line_allapps">false</bool>
-    <bool name="config_default_enable_nightly_auto_updater">true</bool>
+    <bool name="config_default_enable_nightly_auto_updater">false</bool>
     <bool name="config_default_enable_folder_icon_shape_customization">false</bool>
 
     <item name="config_default_home_icon_size_factor" type="dimen" format="float">1.0</item>
-    <item name="config_default_folder_preview_background_opacity" type="dimen" format="float">1.0</item>
-    <item name="config_default_folder_background_opacity" type="dimen" format="float">1.0</item>
+    <item name="config_default_folder_preview_background_opacity" type="dimen" format="float">0.45</item>
+    <item name="config_default_folder_background_opacity" type="dimen" format="float">0.62</item>
     <item name="config_default_drawer_icon_size_factor" type="dimen" format="float">1.0</item>
     <item name="config_default_home_icon_label_size_factor" type="dimen" format="float">1.0</item>
     <item name="config_default_home_icon_label_folder_size_factor" type="dimen" format="float">1.0</item>

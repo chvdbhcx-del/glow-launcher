@@ -113,7 +113,10 @@ class PreferenceManager @Inject constructor(
     val workspaceIncreaseMaxGridSize = BoolPref("pref_workspace_increase_max_grid_size", false)
     val folderRows = IdpIntPref("pref_folderRows", { numFolderRows[INDEX_DEFAULT] }, reloadGrid)
 
-    val drawerOpacity = FloatPref("pref_drawerOpacity", .5f, recreate)
+    val drawerOpacity = FloatPref("pref_drawerOpacity", .3f, recreate)
+
+    // Glow: home screen page indicator style (search, dots, capsule, line, none)
+    val glowPageIndicatorStyle = StringPref("pref_glowPageIndicatorStyle", "search", recreate)
     val coloredBackgroundLightness = FloatPref("pref_coloredBackgroundLightness", 1F)
     val feedProvider = StringPref("pref_feedProvider", "")
     val ignoreFeedWhitelist = BoolPref("pref_ignoreFeedWhitelist", false)
@@ -140,7 +143,8 @@ class PreferenceManager @Inject constructor(
     val recentActionOrder = StringPref("pref_recentActionOrder", "0,1,2,3,4", recreate)
 
     private val fontCache = FontCache.INSTANCE.get(context)
-    val fontWorkspace = FontPref("pref_workspaceFont", fontCache.uiText, recreate)
+    // Glow: iOS-like home screen labels in the system font, medium weight
+    val fontWorkspace = FontPref("pref_workspaceFont", FontCache.SystemFont("sans-serif-medium"), recreate)
     val fontHeading = FontPref("pref_fontHeading", fontCache.uiRegular, recreate)
     val fontHeadingMedium = FontPref("pref_fontHeadingMedium", fontCache.uiMedium, recreate)
     val fontBody = FontPref("pref_fontBody", fontCache.uiText, recreate)
@@ -167,15 +171,15 @@ class PreferenceManager @Inject constructor(
     val drawerThemedIcons = BoolPref("drawer_themed_icons", false, reloadIcons)
 
     val hotseatQsbCornerRadius = FloatPref("pref_hotseatQsbCornerRadius", 1F, recreate)
-    val hotseatQsbAlpha = IntPref("pref_searchHotseatTranparency", 100, recreate)
+    val hotseatQsbAlpha = IntPref("pref_searchHotseatTranparency", 26, recreate)
     val hotseatQsbStrokeWidth = FloatPref("pref_searchStrokeWidth", 0F, recreate)
-    val hotseatBG = BoolPref("pref_hotseatBG", false, recreate)
-    val hotseatBGHorizontalInsetLeft = IntPref("pref_hotseatBGHRinsetLeft", 0, recreate)
-    val hotseatBGVerticalInsetTop = IntPref("pref_hotseatBGVRinsetTop", 0, recreate)
-    val hotseatBGHorizontalInsetRight = IntPref("pref_hotseatBGHRinsetRight", 0, recreate)
-    val hotseatBGVerticalInsetBottom = IntPref("pref_hotseatBGVRinsetBottom", 0, recreate)
+    val hotseatBG = BoolPref("pref_hotseatBG", true, recreate)
+    val hotseatBGHorizontalInsetLeft = IntPref("pref_hotseatBGHRinsetLeft", 30, recreate)
+    val hotseatBGVerticalInsetTop = IntPref("pref_hotseatBGVRinsetTop", 10, recreate)
+    val hotseatBGHorizontalInsetRight = IntPref("pref_hotseatBGHRinsetRight", 30, recreate)
+    val hotseatBGVerticalInsetBottom = IntPref("pref_hotseatBGVRinsetBottom", 10, recreate)
 
-    val hotseatBGAlpha = IntPref("pref_hotseatBGTransparency", 100, recreate)
+    val hotseatBGAlpha = IntPref("pref_hotseatBGTransparency", 26, recreate)
 
     val enableWallpaperBlur = BoolPref("pref_enableWallpaperBlur", false, recreate)
     val wallpaperBlur = IntPref("pref_wallpaperBlur", 25, recreate)

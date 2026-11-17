@@ -1,0 +1,118 @@
+name: Release APK
+
+# Push a tag like v1.0.0 (or run manually) to build a signed release
+# APK and publish it as a GitHub Release.
+on:
+  push:
+    tags: [ 'v*' ]
+    # Pushing to a claude/release-* branch publishes a test pre-release
+    branches: [ 'claude/release-*' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag, e.g. v1.0.0'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      # Goes into versionCode, so every published build is newer than the last one
+      GLOW_BUILD_NUMBER: ${{ github.run_number }}
+      RELEASE_TAG: ${{ github.event.inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || format('v1.0.0-test{0}', github.run_number) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Write signing config
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          TEST_KEYSTORE: ${{ secrets.TEST_KEYSTORE }}
+          TEST_KEYSTORE_PASSWORD: ${{ secrets.TEST_KEYSTORE_PASSWORD }}
+          TEST_KEY_ALIAS: ${{ secrets.TEST_KEY_ALIAS }}
+          TEST_KEY_PASSWORD: ${{ secrets.TEST_KEY_PASSWORD }}
+        run: |
+          write_props() {
+            {
+              echo "storeFile=$1"
+              echo "storePassword=$2"
+              echo "keyAlias=$3"
+              echo "keyPassword=$4"
+            } > keystore.properties
+          }
+          if [[ "$RELEASE_TAG" == *-test* ]]; then
+            echo "TEST_RELEASE=true" >> "$GITHUB_ENV"
+            if [ -n "$TEST_KEYSTORE" ]; then
+              echo "$TEST_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/test.jks"
+              write_props "$RUNNER_TEMP/test.jks" "$TEST_KEYSTORE_PASSWORD" "$TEST_KEY_ALIAS" "$TEST_KEY_PASSWORD"
+            else
+              # Legacy public test key, kept only so test builds installed so far keep updating.
+              # Add the TEST_KEYSTORE secrets to switch to a private test key (one reinstall).
+              echo "::warning::TEST_KEYSTORE secrets are missing: signing with the legacy public test key."
+              write_props "$GITHUB_WORKSPACE/.github/test-signing/glow-test.jks" glowtest glowtest glowtest
+            fi
+            exit 0
+          fi
+          if [ -z "$KEYSTORE" ]; then
+            echo "::error::Signing secrets are missing. Add KEYSTORE, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD in the repository settings, or use a tag containing -test."
+            exit 1
+          fi
+          echo "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/key.jks"
+          write_props "$RUNNER_TEMP/key.jks" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD"
+      - name: Refuse to overwrite a published release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $RELEASE_TAG already exists. Published builds are never replaced; use a new tag."
+            exit 1
+          fi
+      - name: Build release APK
+        env:
+          GLOW_RELEASE: 'true'
+        run: ./gradlew assembleLawnWithQuickstepGithubRelease
+      - name: Rename APK
+        run: |
+          apk=$(find build/outputs/apk -name '*.apk' | head -n 1)
+          cp "$apk" "Glow-Launcher-${RELEASE_TAG}.apk"
+          # The in-app updater only installs an APK whose SHA-256 matches this file
+          sha256sum "Glow-Launcher-${RELEASE_TAG}.apk" > "Glow-Launcher-${RELEASE_TAG}.apk.sha256"
+      - uses: actions/upload-artifact@v7
+        # The APK is published on the release below; a full artifact storage must not block it
+        continue-on-error: true
+        with:
+          name: glow-launcher-release
+          path: Glow-Launcher-*.apk*
+          retention-days: 5
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$TEST_RELEASE" = "true" ]; then
+            extra="--prerelease"
+            notes="Test build of Glow Launcher (minified release variant, signed with a test key). Install on Android 8.0 or newer. The final release uses a different key, so uninstall this build before installing it."
+          else
+            extra=""
+            notes="Signed release build of Glow Launcher. Download the APK below and install it on Android 8.0 or newer."
+          fi
+          gh release create "$RELEASE_TAG" "Glow-Launcher-${RELEASE_TAG}.apk" "Glow-Launcher-${RELEASE_TAG}.apk.sha256" \
+            --title "Glow Launcher ${RELEASE_TAG#v}" \
+            --target "$GITHUB_SHA" \
+            --notes "$notes" $extra

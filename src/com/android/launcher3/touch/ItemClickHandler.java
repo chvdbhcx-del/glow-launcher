@@ -103,6 +103,14 @@ public class ItemClickHandler {
         if (!launcher.getWorkspace().isFinishedSwitchingState()) return;
 
         Object tag = v.getTag();
+        // Glow: in the iOS-style edit mode tapping an icon does nothing (only folders open)
+        if (launcher.isInState(com.android.launcher3.LauncherState.EDIT_MODE)
+                && !(tag instanceof FolderInfo) && tag instanceof ItemInfo
+                && (((ItemInfo) tag).container == LauncherSettings.Favorites.CONTAINER_DESKTOP
+                        || ((ItemInfo) tag).container
+                                == LauncherSettings.Favorites.CONTAINER_HOTSEAT)) {
+            return;
+        }
         if (tag instanceof WorkspaceItemInfo) {
             onClickAppShortcut(v, (WorkspaceItemInfo) tag, launcher);
         } else if (tag instanceof FolderInfo) {

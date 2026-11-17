@@ -190,6 +190,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
      * View that defines the search box. Result is rendered inside {@link #mSearchRecyclerView}.
      */
     protected View mSearchContainer;
+    private static final boolean GLOW_SEARCH_AT_BOTTOM = false;
+    // Glow: iOS-style App Library shown instead of the A-Z list until the user asks for it
+    @Nullable protected app.lawnchair.allapps.GlowAppLibraryView mGlowLibrary;
+    private boolean mGlowLibraryVisible = true;
     protected SearchUiManager mSearchUiManager;
     protected boolean mUsingTabs;
     protected RecyclerViewFastScroller mTouchHandler;
@@ -372,6 +376,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
         updateBackgroundVisibility(mActivityContext.getDeviceProfile());
         mSearchUiManager.initializeSearch(this);
+        setUpGlowLibrary();
     }
 
     @Override
@@ -489,6 +494,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             mAllAppsTransitionController.animateAllAppsToNoScale();
             mFastScroller.setVisibility(showFastScroller ? VISIBLE : INVISIBLE);
         }
+        if (mGlowLibrary != null && goingToSearch) {
+            // Glow: get the library out of the way as soon as search starts
+            mGlowLibrary.setVisibility(GONE);
+        }
         mSearchTransitionController.animateToState(goingToSearch, durationMs,
                 /* onEndRunnable = */ () -> {
                     mIsSearching = goingToSearch;
@@ -531,6 +540,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         // input, container should move down.
         if (dragLayer.isEventOverView(mBottomSheetHandleArea, ev)) {
             return true;
+        }
+        if (isGlowLibraryShown()) {
+            // Glow: swipe down closes the drawer only when the library is scrolled to the top
+            return !mGlowLibrary.canScrollUp();
         }
         AllAppsRecyclerView rv = getActiveRecyclerView();
         if (rv == null) {
@@ -588,6 +601,12 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
         if (isSearching()) {
             mWorkManager.reset();
+        }
+        // Glow: every time the drawer is reopened it starts on the App Library
+        if (mGlowLibrary != null) {
+            mGlowLibrary.closeCategory(false);
+            mGlowLibrary.scrollToTop();
+            setGlowLibraryVisible(true);
         }
     }
 
@@ -760,6 +779,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             scrollerLayoutParams.bottomMargin = mSearchContainer.getHeight()
                     + getResources().getDimensionPixelSize(
                             R.dimen.fastscroll_bottom_margin_floating_search);
+        } else if (isSearchBarAtBottom()
+                && mFastScroller.getLayoutParams() instanceof RelativeLayout.LayoutParams lp) {
+            // Glow: keep the fast scroller above the bottom search pill
+            lp.bottomMargin = getBottomSearchBarSpace();
         }
 
         mAllAppsStore.registerIconContainer(mAH.get(AdapterHolder.MAIN).mRecyclerView);
@@ -830,7 +853,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
         removeCustomRules(rvContainer);
         removeCustomRules(getSearchRecyclerView());
-        if (isAppDrawerSearchBarHidden()) {
+        if (isAppDrawerSearchBarHidden() || isSearchBarAtBottom()) {
             layoutWithoutSearchContainer(rvContainer, showTabs);
             layoutWithoutSearchContainer(getSearchRecyclerView(), /* tabs= */ false);
         } else if (isSearchBarFloating()) {
@@ -870,6 +893,12 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
         removeCustomRules(mHeader);
         if (hideSearchBar) {
+            layoutWithoutSearchContainer(mHeader, false /* includeTabsMargin */);
+        } else if (isSearchBarAtBottom()) {
+            // Glow: the search pill lives at the bottom, so the header starts at the top
+            if (mHeader.getLayoutParams() instanceof RelativeLayout.LayoutParams headerLp) {
+                headerLp.removeRule(RelativeLayout.BELOW);
+            }
             layoutWithoutSearchContainer(mHeader, false /* includeTabsMargin */);
         } else if (isSearchBarFloating()) {
             alignParentTop(mHeader, false /* includeTabsMargin */);
@@ -1065,6 +1094,26 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         return dp.allAppsLeftRightMargin + dp.getAllAppsIconStartMargin(mActivityContext);
     }
 
+    /**
+     * Glow: on phones the drawer search pill sits at the bottom of the drawer (iOS / Luminate
+     * style) instead of the top.
+     */
+    public boolean isSearchBarAtBottom() {
+        // Glow: the iOS-style App Library keeps search on top
+        if (!GLOW_SEARCH_AT_BOTTOM) {
+            return false;
+        }
+        DeviceProfile dp = mActivityContext.getDeviceProfile();
+        return !isAppDrawerSearchBarHidden() && !isSearchBarFloating()
+                && !dp.shouldShowAllAppsOnSheet() && !dp.isVerticalBarLayout();
+    }
+
+    /** Glow: space the bottom search pill takes above the navigation bar. */
+    public int getBottomSearchBarSpace() {
+        return getResources().getDimensionPixelSize(R.dimen.search_box_container_height)
+                + Math.round(8 * getResources().getDisplayMetrics().density);
+    }
+
     private boolean isAppDrawerSearchBarHidden() {
         return PreferenceCacheExtensionsKt.firstCached(pref2.getHideAppDrawerSearchBar());
     }
@@ -1251,6 +1300,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         if (!isSearching()) {
             rebindAdapters();
         }
+        if (mGlowLibrary != null) {
+            mGlowLibrary.rebuild();
+        }
         if (mHasWorkApps) {
             mWorkManager.reset();
         }
@@ -1263,6 +1315,49 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 .log(LAUNCHER_ALLAPPS_COUNT);
     }
 
+    private void setUpGlowLibrary() {
+        if (!(mActivityContext instanceof com.android.launcher3.Launcher)) {
+            return;
+        }
+        mGlowLibrary = new app.lawnchair.allapps.GlowAppLibraryView(getContext());
+        // Glow: personal and work profile apps; Private Space keeps its own locked section
+        mGlowLibrary.setAppsProvider(() -> app.lawnchair.allapps.GlowAppLibraryView.visibleApps(
+                getContext(), mAllAppsStore.getApps(),
+                mPrivateProfileManager != null ? mPrivateProfileManager.getItemInfoMatcher() : null));
+        mGlowLibrary.setOnShowAllApps(() -> {
+            setGlowLibraryVisible(false);
+            return kotlin.Unit.INSTANCE;
+        });
+        mGlowLibrary.setHasPrivateSpace(() -> mHasPrivateApps);
+        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+        int index = indexOfChild(getAppsRecyclerViewContainer());
+        addView(mGlowLibrary, index >= 0 ? index + 1 : -1, lp);
+        layoutBelowSearchContainer(mGlowLibrary, false);
+        mGlowLibrary.rebuild();
+        updateSearchResultsVisibility();
+    }
+
+    /** Glow: switches between the App Library and the classic A-Z list. */
+    public void setGlowLibraryVisible(boolean visible) {
+        if (mGlowLibraryVisible == visible) {
+            return;
+        }
+        mGlowLibraryVisible = visible;
+        if (mGlowLibrary != null) {
+            mGlowLibrary.closeCategory(false);
+            mGlowLibrary.scrollToTop();
+        }
+        updateSearchResultsVisibility();
+    }
+
+    private boolean isGlowLibraryShown() {
+        return mGlowLibrary != null && mGlowLibraryVisible && !isSearching();
+    }
+
+    // Glow: swipe right on the side App Library to go back to the home screen
+    @Nullable private app.lawnchair.allapps.GlowSideLibrary.SwipeBack mGlowSwipeBack;
+
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         // The AllAppsContainerView houses the QSB and is hence visible from the Workspace
@@ -1270,6 +1365,16 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         if (!isInAllApps()) {
             mTouchHandler = null;
             return false;
+        }
+        if (mActivityContext instanceof com.android.launcher3.Launcher glowLauncher
+                && app.lawnchair.allapps.GlowSideLibrary.isEnabled(glowLauncher)) {
+            if (mGlowSwipeBack == null) {
+                mGlowSwipeBack = new app.lawnchair.allapps.GlowSideLibrary.SwipeBack(glowLauncher);
+            }
+            if (mGlowSwipeBack.onInterceptTouchEvent(this, ev)) {
+                mTouchHandler = null;
+                return true;
+            }
         }
 
         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
@@ -1289,6 +1394,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
+        if (mGlowSwipeBack != null && mGlowSwipeBack.isDragging()) {
+            return mGlowSwipeBack.onTouchEvent(this, ev);
+        }
         if (!isInAllApps()) {
             return false;
         }
@@ -1385,6 +1493,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     public void setInsets(Rect insets) {
         mInsets.set(insets);
         DeviceProfile grid = mActivityContext.getDeviceProfile();
+        if (mGlowLibrary != null) {
+            mGlowLibrary.setBottomInset(insets.bottom);
+        }
 
         applyAdapterSideAndBottomPaddings(grid);
 
@@ -1434,7 +1545,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
 
-        if (mNavBarScrimHeight > 0) {
+        // Glow: no opaque strip under the App Library, the tiles fade into the nav bar
+        if (mNavBarScrimHeight > 0 && !isGlowLibraryShown()) {
             float left = (getWidth() - getWidth() / getScaleX()) / 2;
             float top = getHeight() / 2f + (getHeight() / 2f - mNavBarScrimHeight) / getScaleY();
             canvas.drawRect(left, top, getWidth() / getScaleX(),
@@ -1453,6 +1565,15 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             // Keep the empty header shell hidden when search is off and there are no tabs.
             mHeader.setVisibility(
                     (isAppDrawerSearchBarHidden() && !mUsingTabs) ? View.GONE : View.VISIBLE);
+        }
+        if (mGlowLibrary != null) {
+            boolean library = isGlowLibraryShown();
+            mGlowLibrary.setVisibility(library ? VISIBLE : GONE);
+            if (library) {
+                getAppsRecyclerViewContainer().setVisibility(INVISIBLE);
+                mHeader.setVisibility(GONE);
+            }
+            mFastScroller.setVisibility(!library && showFastScroller ? VISIBLE : INVISIBLE);
         }
         if (mHeader.isSetUp()) {
             mHeader.setActiveRV(getCurrentPage());
@@ -1885,6 +2006,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 }
                 if (isSearchBarFloating()) {
                     bottomOffset += mSearchContainer.getHeight();
+                } else if (isSearchBarAtBottom()) {
+                    bottomOffset += getBottomSearchBarSpace();
                 }
                 mRecyclerView.setPadding(mPadding.left, mPadding.top, mPadding.right,
                         mPadding.bottom + bottomOffset);
