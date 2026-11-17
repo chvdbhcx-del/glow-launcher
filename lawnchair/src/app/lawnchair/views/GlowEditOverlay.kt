@@ -103,7 +103,7 @@ class GlowEditOverlay @JvmOverloads constructor(
 
     /** Glass pill, 34dp tall to the eye, with a 48dp touch area and a button role for TalkBack. */
     private fun createPill(@StringRes label: Int, onClick: (View) -> Unit) =
-        GlowGlass.pill(context, context.getString(label), PILL_HEIGHT, textSp = 16f, bold = false).apply {
+        GlowGlass.pill(context, context.getString(label), PILL_HEIGHT, textSp = 16f, realBlur = true).apply {
             minWidth = dp(72)
             setOnClickListener(onClick)
         }

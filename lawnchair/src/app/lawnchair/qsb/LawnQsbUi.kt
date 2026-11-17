@@ -263,7 +263,8 @@ fun rememberAllAppsQsbState(
             startIcon = QsbIconState(
                 id = QsbIconId.SEARCH,
                 resId = resId,
-                themed = themed || resId == R.drawable.ic_qsb_search,
+                // Glow: the plain magnifier stays white on glass instead of taking the accent
+                themed = themed && resId != R.drawable.ic_qsb_search,
                 method = if (shouldShowIcons) searchProvider.themingMethod else ThemingMethod.TINT,
                 contentDescription = searchLabel,
             ),
