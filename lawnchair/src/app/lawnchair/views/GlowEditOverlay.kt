@@ -22,7 +22,6 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.util.AttributeSet
 import android.util.TypedValue
@@ -122,11 +121,11 @@ class GlowEditOverlay @JvmOverloads constructor(
 
         val list = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
-                setColor(if (canBlur) Color.argb(150, 38, 34, 48) else Color.argb(238, 38, 34, 48))
-                setStroke(dp(1).coerceAtLeast(1), Color.argb(40, 255, 255, 255))
-            }
+            // Dark glass that blurs the wallpaper inside its own (animated) bounds, so the
+            // blur grows together with the menu instead of popping in as a full-size box
+            background = GlowGlassDrawable(
+                context, dp(16).toFloat(), GlowGlass.Level.CARD, true, if (canBlur) 150 else 238,
+            ).also { if (canBlur) it.bindBlur(this, 30) }
             clipToOutline = true
         }
         val items = listOf<Triple<Int, Int, () -> Unit>>(
@@ -194,9 +193,6 @@ class GlowEditOverlay @JvmOverloads constructor(
                 windowAnimations = 0
             }
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            if (canBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                setBackgroundBlurRadius(dp(30))
-            }
         }
         dialog.setOnDismissListener { if (menu === dialog) menu = null }
         menu = dialog

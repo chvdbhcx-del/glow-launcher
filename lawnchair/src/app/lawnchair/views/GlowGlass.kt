@@ -58,14 +58,17 @@ object GlowGlass {
      * landing), everything that closes uses [EXIT]; small pop-ups get [POP].
      */
     object Motion {
-        const val SHORT = 150L
-        const val MEDIUM = 240L
-        const val LONG = 320L
+        const val SHORT = 180L
+        const val MEDIUM = 280L
+        const val LONG = 400L
 
-        @JvmField val ENTER: Interpolator = PathInterpolator(0.05f, 0.7f, 0.1f, 1f)
-        @JvmField val EXIT: Interpolator = PathInterpolator(0.3f, 0f, 0.8f, 0.15f)
-        @JvmField val STANDARD: Interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
-        @JvmField val POP: Interpolator = OvershootInterpolator(1.1f)
+        /** Opening: starts gently, glides to a soft stop (no jump on the first frame). */
+        @JvmField val ENTER: Interpolator = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
+
+        /** Closing: eases in and eases out, so nothing stops dead at the end. */
+        @JvmField val EXIT: Interpolator = PathInterpolator(0.4f, 0f, 0.2f, 1f)
+        @JvmField val STANDARD: Interpolator = PathInterpolator(0.25f, 0.1f, 0.25f, 1f)
+        @JvmField val POP: Interpolator = OvershootInterpolator(0.7f)
     }
 
     /** Minimum touch target recommended by Android accessibility guidelines. */

@@ -641,8 +641,9 @@ public class Hotseat extends FrameLayout implements Insettable {
     }
 
     private int mGlowDockTop = -1;
+    @Nullable private View mGlowAlignedIndicator;
 
-    /** Glow: moves the workspace page indicator so its bottom sits 11dp above the dock. */
+    /** Glow: moves the workspace page indicator so its bottom sits 14dp above the dock. */
     private void alignGlowPageIndicator() {
         if (mWorkspace == null || mGlowDockTop < 0 || getHeight() == 0) return;
         View indicator = (View) mWorkspace.getPageIndicator();
@@ -651,7 +652,15 @@ public class Hotseat extends FrameLayout implements Insettable {
                 || indicator.getParent() != getParent()) {
             return;
         }
-        int wantedBottom = getTop() + mGlowDockTop - Math.round(dpToPx(11f));
+        if (mGlowAlignedIndicator != indicator) {
+            // The workspace re-applies its own margin whenever insets change; align again
+            // after every layout of the indicator so the pill never slides onto the dock
+            mGlowAlignedIndicator = indicator;
+            indicator.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+                if (b != ob) post(this::alignGlowPageIndicator);
+            });
+        }
+        int wantedBottom = getTop() + mGlowDockTop - Math.round(dpToPx(14f));
         int delta = indicator.getBottom() - wantedBottom;
         if (Math.abs(delta) > 1) {
             lp.bottomMargin += delta;

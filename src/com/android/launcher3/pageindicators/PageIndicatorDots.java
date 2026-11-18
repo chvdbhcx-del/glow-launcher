@@ -517,12 +517,19 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
         boolean inside = mGlowTouchRect.contains(ev.getX(), ev.getY());
         switch (ev.getActionMasked()) {
             case android.view.MotionEvent.ACTION_DOWN:
+                if (inside) glowPress(true);
                 return inside;
+            case android.view.MotionEvent.ACTION_CANCEL:
+                glowPress(false);
+                return true;
             case android.view.MotionEvent.ACTION_UP:
-                if (inside && getContext() instanceof com.android.launcher3.Launcher) {
-                    com.android.launcher3.Launcher launcher =
-                            (com.android.launcher3.Launcher) getContext();
-                    if (launcher.isInState(com.android.launcher3.LauncherState.NORMAL)) {
+                glowPress(false);
+                // The view is inflated with a theme wrapper (HomeScreenElementTheme), so
+                // getContext() is not the Launcher itself: look it up through the wrapper
+                com.android.launcher3.Launcher launcher = inside
+                        ? com.android.launcher3.Launcher.getLauncher(getContext()) : null;
+                if (launcher != null) {
+                    if (!launcher.isInState(com.android.launcher3.LauncherState.ALL_APPS)) {
                         performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
                         app.lawnchair.views.GlowPageIndicator.openSearch(launcher);
                     }
@@ -531,6 +538,18 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
             default:
                 return true;
         }
+    }
+
+    /** Glow: the search pill dips slightly under the finger and springs back. */
+    private void glowPress(boolean down) {
+        setPivotX(getWidth() / 2f);
+        setPivotY(getHeight() / 2f);
+        float scale = down ? 0.94f : 1f;
+        animate().scaleX(scale).scaleY(scale)
+                .setDuration(down ? 120 : app.lawnchair.views.GlowGlass.Motion.MEDIUM)
+                .setInterpolator(down ? app.lawnchair.views.GlowGlass.Motion.STANDARD
+                        : app.lawnchair.views.GlowGlass.Motion.POP)
+                .start();
     }
 
     private void onDrawDots(Canvas canvas) {

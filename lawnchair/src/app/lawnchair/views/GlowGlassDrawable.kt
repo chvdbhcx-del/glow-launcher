@@ -21,6 +21,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.LinearGradient
+import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Rect
@@ -204,6 +205,12 @@ class GlowGlassDrawable @JvmOverloads constructor(
     }
 
     override fun getAlpha(): Int = drawAlpha
+
+    override fun getOutline(outline: Outline) {
+        val b = bounds
+        outline.setRoundRect(b, min(radius, min(b.width(), b.height()) / 2f))
+        outline.alpha = drawAlpha / 255f * 0.5f
+    }
 
     override fun setColorFilter(colorFilter: ColorFilter?) = Unit
 

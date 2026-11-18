@@ -423,7 +423,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
                     card.scaleX = 0.9f
                     card.scaleY = 0.9f
                 }
-                card.animate().alpha(1f).setDuration(GlowGlass.Motion.SHORT).start()
+                card.animate().alpha(1f).setDuration(GlowGlass.Motion.SHORT)
+                    .setInterpolator(GlowGlass.Motion.STANDARD).start()
                 card.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f)
                     .setDuration(GlowGlass.Motion.LONG)
                     .setInterpolator(GlowGlass.Motion.ENTER)
@@ -712,7 +713,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 card.pivotY = 0f
                 if (placeOnOrigin(card, origin, animate = true)) {
                     card.animate().alpha(0f).setStartDelay(GlowGlass.Motion.SHORT / 2)
-                        .setDuration(GlowGlass.Motion.SHORT).start()
+                        .setDuration(GlowGlass.Motion.SHORT)
+                        .setInterpolator(GlowGlass.Motion.STANDARD).start()
                 }
             }
             overlay.animate().cancel()
@@ -733,7 +735,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
 
     private var folderCard: View? = null
     private var folderOrigin: java.lang.ref.WeakReference<View>? = null
-    private var blurStep = 0
+    private var blurRadius = 0f
 
     /**
      * Moves [card] (pivot at its top-left corner) onto [origin], the tile it opens from,
@@ -765,15 +767,14 @@ class GlowAppLibraryView @JvmOverloads constructor(
         return true
     }
 
-    /** Blurs the tiles behind an open category; the radius moves in a few steps to stay cheap. */
+    /** Blurs the tiles behind an open category; follows the fade smoothly, frame by frame. */
     private fun setTilesBlur(fraction: Float) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-        val step = Math.round(fraction.coerceIn(0f, 1f) * BLUR_STEPS)
-        if (step == blurStep) return
-        blurStep = step
-        val radius = 28 * density * step / BLUR_STEPS
+        val radius = 28 * density * fraction.coerceIn(0f, 1f)
+        if (kotlin.math.abs(radius - blurRadius) < 0.5f && (radius == 0f) == (blurRadius == 0f)) return
+        blurRadius = radius
         tiles.setRenderEffect(
-            if (step == 0) null else RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP),
+            if (radius < 0.5f) null else RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP),
         )
     }
 
@@ -792,7 +793,6 @@ class GlowAppLibraryView @JvmOverloads constructor(
         private const val RECENT_COUNT = 8
         private const val RECENT_WINDOW_MS = 14L * 24 * 60 * 60 * 1000
         private const val REBUILD_DELAY_MS = 300L
-        private const val BLUR_STEPS = 6
 
         /** package -> group, filled once per package; cleared for packages that change. */
         private val groupCache = ConcurrentHashMap<String, String>()
