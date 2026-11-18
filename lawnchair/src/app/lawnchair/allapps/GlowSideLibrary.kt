@@ -38,7 +38,10 @@ object GlowSideLibrary {
     @JvmStatic
     fun isEnabled(launcher: Launcher): Boolean {
         val dp = launcher.deviceProfile
-        return !dp.shouldShowAllAppsOnSheet() && !dp.isVerticalBarLayout
+        // Phones only. Not gated on shouldShowAllAppsOnSheet(): this build turns the
+        // all_apps_sheet_for_handheld flag on, which made that check false on every phone
+        // and silently kept the library on the vertical drawer.
+        return dp.deviceProperties.isPhone && !dp.isVerticalBarLayout
     }
 
     /** +1 when the library sits to the right of the home screen, -1 in right-to-left layouts. */
