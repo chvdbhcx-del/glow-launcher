@@ -636,35 +636,23 @@ public class Hotseat extends FrameLayout implements Insettable {
             int dockTop = Math.round(containerTop + mPlateCenterY - mPlateHalfHeight);
             if (qsbAbove) dockTop = Math.min(dockTop, qsbTop);
             mGlowDockTop = dockTop;
-            post(this::alignGlowPageIndicator);
+            post(this::invalidateGlowPageIndicator);
         }
     }
 
     private int mGlowDockTop = -1;
-    @Nullable private View mGlowAlignedIndicator;
 
-    /** Glow: moves the workspace page indicator so its bottom sits 14dp above the dock. */
-    private void alignGlowPageIndicator() {
-        if (mWorkspace == null || mGlowDockTop < 0 || getHeight() == 0) return;
-        View indicator = (View) mWorkspace.getPageIndicator();
-        if (indicator == null || indicator.getHeight() == 0
-                || !(indicator.getLayoutParams() instanceof FrameLayout.LayoutParams lp)
-                || indicator.getParent() != getParent()) {
-            return;
-        }
-        if (mGlowAlignedIndicator != indicator) {
-            // The workspace re-applies its own margin whenever insets change; align again
-            // after every layout of the indicator so the pill never slides onto the dock
-            mGlowAlignedIndicator = indicator;
-            indicator.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
-                if (b != ob) post(this::alignGlowPageIndicator);
-            });
-        }
-        int wantedBottom = getTop() + mGlowDockTop - Math.round(dpToPx(14f));
-        int delta = indicator.getBottom() - wantedBottom;
-        if (Math.abs(delta) > 1) {
-            lp.bottomMargin += delta;
-            indicator.setLayoutParams(lp);
+    /**
+     * Glow: top edge of the dock plate in the parent's (drag layer's) coordinates, or -1.
+     * The home "Search" pill positions itself from this, so it always keeps its gap.
+     */
+    public int getGlowDockTop() {
+        return mGlowDockTop < 0 ? -1 : getTop() + mGlowDockTop;
+    }
+
+    private void invalidateGlowPageIndicator() {
+        if (mWorkspace != null && mWorkspace.getPageIndicator() instanceof View indicator) {
+            indicator.invalidate();
         }
     }
 

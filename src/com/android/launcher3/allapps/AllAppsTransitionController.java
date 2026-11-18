@@ -405,6 +405,14 @@ public class AllAppsTransitionController
                 setProgress(targetProgress);
             }
         });
+        if (!config.isUserControlled()
+                && app.lawnchair.allapps.GlowSideLibrary.isEnabled(mLauncher)) {
+            // Glow: the library slides in from the side with a soft landing and leaves
+            // with an ease-in-out, instead of the vertical drawer's spring
+            verticalProgressInterpolator = ALL_APPS.equals(toState)
+                    ? app.lawnchair.views.GlowGlass.Motion.ENTER
+                    : app.lawnchair.views.GlowGlass.Motion.EXIT;
+        }
         anim.setInterpolator(verticalProgressInterpolator);
         builder.add(anim);
 

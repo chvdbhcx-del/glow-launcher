@@ -88,8 +88,49 @@ class GlowAppLibraryView @JvmOverloads constructor(
         isVerticalScrollBarEnabled = false
         overScrollMode = OVER_SCROLL_NEVER
         clipToPadding = false
-        isVerticalFadingEdgeEnabled = true
-        setFadingEdgeLength(dp(32))
+        // No built-in fading edge: with clipToPadding=false it fades at the padding line and
+        // leaves a hard band below it. The library masks the true edges itself (drawChild).
+        isVerticalFadingEdgeEnabled = false
+    }
+
+    private val edgeMask = android.graphics.Paint().apply {
+        xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT)
+    }
+    private var topMask: android.graphics.Shader? = null
+    private var bottomMask: android.graphics.Shader? = null
+    private var maskSize = 0
+
+    private fun topFade() = dp(TOP_FADE_DP)
+    private fun bottomFade() = bottomInset + dp(BOTTOM_FADE_DP)
+
+    /** Fades the tiles out softly under the search bar and above the gesture bar. */
+    override fun drawChild(canvas: android.graphics.Canvas, child: View, drawingTime: Long): Boolean {
+        if (child !== tiles || width == 0 || height == 0) return super.drawChild(canvas, child, drawingTime)
+        val h = height.toFloat()
+        val size = height * 31 + bottomFade()
+        if (size != maskSize) {
+            maskSize = size
+            topMask = android.graphics.LinearGradient(
+                0f, 0f, 0f, topFade().toFloat(),
+                Color.BLACK, Color.TRANSPARENT, android.graphics.Shader.TileMode.CLAMP,
+            )
+            bottomMask = android.graphics.LinearGradient(
+                0f, h - bottomFade(), 0f, h,
+                intArrayOf(Color.TRANSPARENT, 0x99000000.toInt(), Color.BLACK),
+                floatArrayOf(0f, 0.55f, 1f),
+                android.graphics.Shader.TileMode.CLAMP,
+            )
+        }
+        val save = canvas.saveLayer(0f, 0f, width.toFloat(), h, null)
+        val result = super.drawChild(canvas, child, drawingTime)
+        if (tiles.canScrollVertically(-1)) {
+            edgeMask.shader = topMask
+            canvas.drawRect(0f, 0f, width.toFloat(), topFade().toFloat(), edgeMask)
+        }
+        edgeMask.shader = bottomMask
+        canvas.drawRect(0f, h - bottomFade(), width.toFloat(), h, edgeMask)
+        canvas.restoreToCount(save)
+        return result
     }
 
     private var folderOverlay: View? = null
@@ -116,7 +157,9 @@ class GlowAppLibraryView @JvmOverloads constructor(
     fun setBottomInset(bottom: Int) {
         bottomInset = bottom
         val side = dp(SIDE_PADDING_DP)
-        tiles.setPadding(side, dp(4), side, bottom + dp(24))
+        tiles.setPadding(side, dp(10), side, bottom + dp(BOTTOM_FADE_DP) + dp(8))
+        maskSize = 0
+        invalidate()
         listView?.setPadding(0, 0, 0, bottom + dp(24))
     }
 
@@ -333,6 +376,10 @@ class GlowAppLibraryView @JvmOverloads constructor(
         val gap = (slot * MINI_GAP_RATIO).roundToInt().coerceAtLeast(dp(3))
         val mini = (slot - gap) / 2
         val start = (slot - 2 * mini - gap) / 2
+        // One row (5 or 6 apps in the category) sits in the middle of the slot, level with
+        // the big icon next to it, instead of hanging at the top
+        val rows = (apps.size + 1) / 2
+        val top = (slot - rows * mini - (rows - 1) * gap) / 2
         apps.forEachIndexed { i, app ->
             grid.addView(ImageView(context).apply {
                 setImageDrawable(app.newIcon(context))
@@ -340,7 +387,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
             }, LayoutParams(mini, mini).apply {
                 leftMargin = start + (i % 2) * (mini + gap)
-                topMargin = start + (i / 2) * (mini + gap)
+                topMargin = top + (i / 2) * (mini + gap)
             })
         }
         return grid
@@ -782,6 +829,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
 
     companion object {
         private const val SIDE_PADDING_DP = 20
+        private const val TOP_FADE_DP = 28
+        private const val BOTTOM_FADE_DP = 40
         private const val TILE_GAP_DP = 18
 
         /** Spacing inside a tile, as a share of its width (about 14dp on a phone). */

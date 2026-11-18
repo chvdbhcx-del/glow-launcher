@@ -540,10 +540,34 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
         }
     }
 
+    /**
+     * Glow: vertical centre of the search pill inside this view, so the pill's bottom edge
+     * sits a fixed gap above the dock plate whatever margins the workspace applied.
+     */
+    public float getGlowPillCenterY() {
+        float half = getHeight() / 2f;
+        float d = getResources().getDisplayMetrics().density;
+        float pillHalf = app.lawnchair.views.GlowPageIndicator.PILL_HEIGHT_DP * d / 2f;
+        try {
+            com.android.launcher3.Launcher launcher =
+                    com.android.launcher3.Launcher.getLauncher(getContext());
+            com.android.launcher3.Hotseat hotseat = launcher.getHotseat();
+            if (hotseat == null || hotseat.getParent() != getParent()) return half;
+            int dockTop = hotseat.getGlowDockTop();
+            if (dockTop < 0) return half;
+            float wanted = dockTop - getTop() - GLOW_DOCK_GAP_DP * d - pillHalf;
+            return Math.max(pillHalf, Math.min(getHeight() - pillHalf, wanted));
+        } catch (RuntimeException e) {
+            return half;
+        }
+    }
+
+    private static final float GLOW_DOCK_GAP_DP = 12f;
+
     /** Glow: the search pill dips slightly under the finger and springs back. */
     private void glowPress(boolean down) {
         setPivotX(getWidth() / 2f);
-        setPivotY(getHeight() / 2f);
+        setPivotY(getGlowPillCenterY());
         float scale = down ? 0.94f : 1f;
         animate().scaleX(scale).scaleY(scale)
                 .setDuration(down ? 120 : app.lawnchair.views.GlowGlass.Motion.MEDIUM)

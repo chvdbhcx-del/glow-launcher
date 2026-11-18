@@ -67,6 +67,15 @@ public class PortraitStatesTouchController extends AbstractStateChangeTouchContr
                     return false;
                 }
         }
+        // Glow: the App Library is a page beside the home screen. It opens by swiping past
+        // the last home page and closes with a sideways swipe, never with a vertical swipe
+        // (a swipe that starts on the gesture bar still goes to overview / home)
+        if (mCurrentAnimation == null
+                && (ev.getEdgeFlags() & com.android.launcher3.Utilities.EDGE_NAV_BAR) == 0
+                && (mLauncher.isInState(NORMAL) || mLauncher.isInState(ALL_APPS))
+                && app.lawnchair.allapps.GlowSideLibrary.isEnabled(mLauncher)) {
+            return false;
+        }
         // If we are swiping to all apps instead of overview, allow it from anywhere.
         boolean interceptAnywhere = mLauncher.isInState(NORMAL);
         if (mCurrentAnimation != null) {

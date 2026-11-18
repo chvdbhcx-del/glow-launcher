@@ -55,8 +55,10 @@ object GlowPageIndicator {
 
     val STYLES = listOf(STYLE_SEARCH, STYLE_DOTS, STYLE_CAPSULE, STYLE_LINE, STYLE_NONE)
 
-    private const val PILL_HEIGHT_DP = 30f
-    private const val VIEW_HEIGHT_DP = 36
+    const val PILL_HEIGHT_DP = 32f
+
+    /** Tall enough for the pill to settle a fixed gap above the dock (see getGlowPillCenterY). */
+    private const val VIEW_HEIGHT_DP = 76
 
     /** One glass pill per indicator view; the home one blurs the wallpaper behind it. */
     private val pills = java.util.WeakHashMap<View, GlowGlassDrawable>()
@@ -110,9 +112,13 @@ object GlowPageIndicator {
         val width = 16f * d + 16f * d + 6f * d + textPaint.measureText(label) + 16f * d
         val h = PILL_HEIGHT_DP * d
         val cx = view.width / 2f
-        val cy = view.height / 2f
+        val cy = pillCenterY(view)
         out.set(cx - width / 2f, cy - h / 2f, cx + width / 2f, cy + h / 2f)
     }
+
+    /** Where the search pill sits vertically inside [view]. */
+    private fun pillCenterY(view: View): Float =
+        (view as? com.android.launcher3.pageindicators.PageIndicatorDots)?.glowPillCenterY ?: (view.height / 2f)
 
     @JvmStatic
     fun openSearch(launcher: Launcher) {
@@ -149,6 +155,7 @@ object GlowPageIndicator {
         when (style) {
             STYLE_NONE -> Unit
             STYLE_SEARCH -> {
+                val py = pillCenterY(view)
                 val dotsWidth = dotsWidth(numPages, d)
                 getSearchPillBounds(view, rect)
                 // While swiping the pill morphs to the width of the dots.
@@ -158,13 +165,13 @@ object GlowPageIndicator {
                 val morph = GlowGlass.Motion.STANDARD.getInterpolation(showDots)
                 val width = searchWidth + (dotsPillWidth - searchWidth) * morph
                 val h = PILL_HEIGHT_DP * d
-                rect.set(cx - width / 2f, cy - h / 2f, cx + width / 2f, cy + h / 2f)
+                rect.set(cx - width / 2f, py - h / 2f, cx + width / 2f, py + h / 2f)
                 drawPill(view, canvas, rect, 1f, onLightWallpaper)
                 // Hand-over instead of a cross-fade: the label leaves during the first half,
                 // the dots arrive during the second, so the two never overlap in a smudge
                 val searchAlpha = (1f - showDots * 2f).coerceIn(0f, 1f)
                 val dotsIn = (showDots * 2f - 1f).coerceIn(0f, 1f)
-                if (dotsIn > 0f) drawDots(canvas, cx, cy, numPages, pos, d, dotsIn, GlowGlass.ON_GLASS)
+                if (dotsIn > 0f) drawDots(canvas, cx, py, numPages, pos, d, dotsIn, GlowGlass.ON_GLASS)
                 if (searchAlpha > 0f) drawSearchLabel(view, canvas, rect, d, searchAlpha)
             }
             STYLE_LINE -> {
