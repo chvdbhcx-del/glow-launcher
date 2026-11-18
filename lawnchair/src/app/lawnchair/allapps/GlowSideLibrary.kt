@@ -53,12 +53,17 @@ object GlowSideLibrary {
         val appsView = launcher.appsView ?: return
         val width = launcher.dragLayer?.width?.takeIf { it > 0 } ?: appsView.width
         appsView.translationX = direction(appsView) * progress.coerceIn(0f, 1f) * width
+        // The sheet's background is painted by the scrim from the container's position
+        launcher.scrimView?.invalidate()
     }
 
     @JvmStatic
     fun clear(launcher: Launcher) {
         val appsView = launcher.appsView ?: return
-        if (appsView.translationX != 0f) appsView.translationX = 0f
+        if (appsView.translationX != 0f) {
+            appsView.translationX = 0f
+            launcher.scrimView?.invalidate()
+        }
     }
 
     /** A rightward swipe on the library drags it away and returns to the home screen. */

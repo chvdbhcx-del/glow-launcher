@@ -1772,8 +1772,14 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         final float horizontalScaleOffset = (1 - scale) * panel.getWidth() / 2;
         final float verticalScaleOffset = (1 - scale) * (panel.getHeight() - getHeight() / 2);
         // Left and right insets can be applied to this container, as well as the panel.
-        float left = getLeft() + panel.getLeft();
+        // Glow: the side App Library moves the whole container sideways (translationX); the
+        // panel drawn on the scrim has to follow it, or it stays behind as a tinted sheet
+        // over the home screen after the library closes
+        float left = getLeft() + panel.getLeft() + ((View) panel.getParent()).getTranslationX();
         float right = left + panel.getWidth();
+        if (right <= 0 || left >= ((View) getParent()).getWidth()) {
+            return;
+        }
 
         final float topNoScale = panel.getTop() + translationY;
         final float topWithScale = topNoScale + verticalScaleOffset;
