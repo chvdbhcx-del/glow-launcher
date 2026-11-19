@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.lawnchair.ui.theme.LawnchairTheme
+import app.lawnchair.ui.theme.glowSettingsBackground
 import app.lawnchair.ui.util.preview.PreviewLawnchair
 
 @Composable
@@ -52,9 +53,10 @@ fun PreferenceSearchScaffold(
 ) {
     val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.glowSettingsBackground(),
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
-            Surface {
+            Surface(color = androidx.compose.ui.graphics.Color.Transparent) {
                 SearchBar(
                     value,
                     onValueChange,
@@ -89,7 +91,7 @@ private fun SearchBar(
             .fillMaxWidth()
             .height(56.dp)
             .background(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                color = app.lawnchair.ui.theme.GlowSettingsColors.Card,
                 shape = CircleShape,
             ),
     ) {

@@ -37,22 +37,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import app.lawnchair.preferences.observeAsState
-import app.lawnchair.preferences.preferenceManager
 import app.lawnchair.preferences2.asState
 import app.lawnchair.preferences2.preferenceManager2
 import app.lawnchair.theme.ThemeProvider
 import app.lawnchair.theme.toComposeColorScheme
-import app.lawnchair.ui.preferences.components.ThemeChoice
 import app.lawnchair.wallpaper.WallpaperManagerCompat
 import com.android.launcher3.Utilities
 
 @Composable
 fun LawnchairTheme(
-    darkTheme: Boolean = isSelectedThemeDark,
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = getColorScheme(darkTheme = darkTheme)
+    // Glow: one fixed dark violet palette everywhere, see GlowSettingsTheme.kt
+    val colorScheme = glowColorScheme()
     MaterialExpressiveTheme(
         colorScheme = colorScheme,
         typography = Typography,
@@ -64,8 +62,8 @@ fun LawnchairTheme(
 
 @Composable
 fun ComponentActivity.EdgeToEdge() {
-    val darkTheme = isSelectedThemeDark
-    val scrimColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f).toArgb()
+    val darkTheme = true
+    val scrimColor = android.graphics.Color.TRANSPARENT
     val contentColor = MaterialTheme.colorScheme.onSurface.toArgb()
 
     LaunchedEffect(darkTheme) {
@@ -110,17 +108,9 @@ private fun getPreviewColorScheme(darkTheme: Boolean) = if (darkTheme) {
     expressiveLightColorScheme()
 }
 
+// Glow: settings always use the dark Glow palette
 val isSelectedThemeDark: Boolean
-    @Composable get() {
-        if (LocalInspectionMode.current) return isAutoThemeDark
-
-        val themeChoice by preferenceManager().launcherTheme.observeAsState()
-        return when (themeChoice) {
-            ThemeChoice.LIGHT -> false
-            ThemeChoice.DARK -> true
-            else -> isAutoThemeDark
-        }
-    }
+    @Composable get() = true
 
 val isAutoThemeDark: Boolean @Composable get() =
     if (LocalInspectionMode.current || Utilities.ATLEAST_P) {

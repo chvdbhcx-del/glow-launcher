@@ -78,7 +78,8 @@ fun TopBar(
             },
             scrollBehavior = scrollBehavior,
             colors = TopAppBarDefaults.topAppBarColors().copy(
-                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                scrolledContainerColor = app.lawnchair.ui.theme.GlowSettingsColors.Base.copy(alpha = 0.92f),
             ),
         )
     } else {
@@ -107,7 +108,8 @@ fun TopBar(
             },
             scrollBehavior = scrollBehavior,
             colors = TopAppBarDefaults.topAppBarColors().copy(
-                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                scrolledContainerColor = app.lawnchair.ui.theme.GlowSettingsColors.Base.copy(alpha = 0.92f),
             ),
         )
     }

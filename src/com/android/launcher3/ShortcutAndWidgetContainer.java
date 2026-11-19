@@ -88,9 +88,12 @@ public class ShortcutAndWidgetContainer extends ViewGroup implements FolderIcon.
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         boolean mAllowWidgetOverlap = PreferenceCacheExtensionsKt.firstCached(mPreferenceManager2.getAllowWidgetOverlap());
-        setClipChildren(!mAllowWidgetOverlap);
-        setClipToPadding(!mAllowWidgetOverlap);
-        setClipToOutline(!mAllowWidgetOverlap);
+        // Glow: the dock only holds icons, and the edit-mode wiggle swings their corners
+        // past the container's edge, so the dock never clips its children.
+        boolean clip = !mAllowWidgetOverlap && mContainerType != HOTSEAT;
+        setClipChildren(clip);
+        setClipToPadding(clip);
+        setClipToOutline(clip);
     }
 
     public void setCellDimensions(int cellWidth, int cellHeight, int countX, int countY,

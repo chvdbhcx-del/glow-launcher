@@ -2,13 +2,8 @@ name: Screenshots
 
 # Installs a published test build on an emulator, walks through the main Glow
 # screens and publishes the screenshots as a "screens-<tag>" pre-release.
-# Runs when this workflow or its script changes on a claude/* branch, or manually.
+# Started manually (workflow_dispatch) once a test release is published.
 on:
-  push:
-    branches: [ 'claude/**' ]
-    paths:
-      - '.github/workflows/screenshots.yml'
-      - '.github/scripts/screens.sh'
   workflow_dispatch:
     inputs:
       tag:
@@ -25,7 +20,7 @@ jobs:
     permissions:
       contents: write
     env:
-      APK_TAG: ${{ github.event.inputs.tag || 'v1.0.0-test24' }}
+      APK_TAG: ${{ github.event.inputs.tag || 'v1.0.0-test25' }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7

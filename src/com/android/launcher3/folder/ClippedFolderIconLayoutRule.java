@@ -16,6 +16,11 @@ public class ClippedFolderIconLayoutRule {
     private static final float ITEM_RADIUS_SCALE_FACTOR = 1.15f;
     private static final float ITEM_RADIUS_SCALE_FACTOR_SHAPES = 1.2f;
 
+    // Glow: the mini icons sit inside the glass folder plate with an even margin
+    // (about 12% of the plate) instead of touching its edge.
+    private static final float GLOW_ITEM_SCALE = 0.82f;
+    private static final float GLOW_RADIUS_SCALE = 0.87f;
+
     public static final int EXIT_INDEX = -2;
     public static final int ENTER_INDEX = -3;
 
@@ -176,6 +181,10 @@ public class ClippedFolderIconLayoutRule {
     }
 
     private float getRadius(int numItems) {
+        return GLOW_RADIUS_SCALE * getBaseRadius(numItems);
+    }
+
+    private float getBaseRadius(int numItems) {
         float radiusDilation = Flags.enableLauncherIconShapes() ? radiusDilationForItems(numItems)
                 : MAX_RADIUS_DILATION;
         if (Flags.enableLauncherIconShapes()) {
@@ -203,7 +212,7 @@ public class ClippedFolderIconLayoutRule {
         } else {
             scale = MIN_SCALE;
         }
-        return scale * mBaselineIconScale;
+        return scale * mBaselineIconScale * GLOW_ITEM_SCALE;
     }
 
     private float radiusDilationForItems(int numItems) {

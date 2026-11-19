@@ -117,6 +117,7 @@ object GlowEditMode {
             stopJiggle()
         }
         launcherRef = WeakReference(launcher)
+        if (active) unclipContainers(launcher)
         animateBadges(launcher, if (active) 1f else 0f)
         if (active) {
             updateRemoveActions(launcher, true)
@@ -190,6 +191,36 @@ object GlowEditMode {
             }
             container.invalidate()
         }
+        restoreClipping()
+    }
+
+    /** Containers whose clipping was switched off for the wiggle, with their old clipChildren. */
+    private val unclipped = WeakHashMap<ShortcutAndWidgetContainer, Boolean>()
+
+    /**
+     * A wiggling icon at the edge of a page swings its corners a few pixels outside the
+     * container, which would cut them off. Clipping is lifted while editing.
+     */
+    private fun unclipContainers(launcher: Launcher) {
+        forEachContainer(launcher) { c ->
+            if (c.clipChildren && !unclipped.containsKey(c)) {
+                unclipped[c] = true
+                c.clipChildren = false
+                c.clipToPadding = false
+                c.clipToOutline = false
+                c.invalidate()
+            }
+        }
+    }
+
+    private fun restoreClipping() {
+        unclipped.keys.toList().forEach { c ->
+            c.clipChildren = true
+            c.clipToPadding = true
+            c.clipToOutline = true
+            c.invalidate()
+        }
+        unclipped.clear()
     }
 
     /** Called when the launcher is destroyed, so nothing keeps it alive. */
