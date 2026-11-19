@@ -55,11 +55,14 @@ object GlowPageIndicator {
 
     val STYLES = listOf(STYLE_SEARCH, STYLE_DOTS, STYLE_CAPSULE, STYLE_LINE, STYLE_NONE)
 
-    private const val PILL_HEIGHT_DP = 30f
-    private const val VIEW_HEIGHT_DP = 36
+    const val PILL_HEIGHT_DP = 32f
 
-    private val pillFill = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val pillStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    /** Tall enough for the pill to settle a fixed gap above the dock (see getGlowPillCenterY). */
+    private const val VIEW_HEIGHT_DP = 76
+
+    /** One glass pill per indicator view; the home one blurs the wallpaper behind it. */
+    private val pills = java.util.WeakHashMap<View, GlowGlassDrawable>()
+    private val pillBounds = android.graphics.Rect()
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -109,9 +112,13 @@ object GlowPageIndicator {
         val width = 16f * d + 16f * d + 6f * d + textPaint.measureText(label) + 16f * d
         val h = PILL_HEIGHT_DP * d
         val cx = view.width / 2f
-        val cy = view.height / 2f
+        val cy = pillCenterY(view)
         out.set(cx - width / 2f, cy - h / 2f, cx + width / 2f, cy + h / 2f)
     }
+
+    /** Where the search pill sits vertically inside [view]. */
+    private fun pillCenterY(view: View): Float =
+        (view as? com.android.launcher3.pageindicators.PageIndicatorDots)?.glowPillCenterY ?: (view.height / 2f)
 
     @JvmStatic
     fun openSearch(launcher: Launcher) {
@@ -148,6 +155,7 @@ object GlowPageIndicator {
         when (style) {
             STYLE_NONE -> Unit
             STYLE_SEARCH -> {
+                val py = pillCenterY(view)
                 val dotsWidth = dotsWidth(numPages, d)
                 getSearchPillBounds(view, rect)
                 // While swiping the pill morphs to the width of the dots.
@@ -157,13 +165,13 @@ object GlowPageIndicator {
                 val morph = GlowGlass.Motion.STANDARD.getInterpolation(showDots)
                 val width = searchWidth + (dotsPillWidth - searchWidth) * morph
                 val h = PILL_HEIGHT_DP * d
-                rect.set(cx - width / 2f, cy - h / 2f, cx + width / 2f, cy + h / 2f)
-                drawPill(canvas, rect, d, 1f, onLightWallpaper)
+                rect.set(cx - width / 2f, py - h / 2f, cx + width / 2f, py + h / 2f)
+                drawPill(view, canvas, rect, 1f, onLightWallpaper)
                 // Hand-over instead of a cross-fade: the label leaves during the first half,
                 // the dots arrive during the second, so the two never overlap in a smudge
                 val searchAlpha = (1f - showDots * 2f).coerceIn(0f, 1f)
                 val dotsIn = (showDots * 2f - 1f).coerceIn(0f, 1f)
-                if (dotsIn > 0f) drawDots(canvas, cx, cy, numPages, pos, d, dotsIn, GlowGlass.ON_GLASS)
+                if (dotsIn > 0f) drawDots(canvas, cx, py, numPages, pos, d, dotsIn, GlowGlass.ON_GLASS)
                 if (searchAlpha > 0f) drawSearchLabel(view, canvas, rect, d, searchAlpha)
             }
             STYLE_LINE -> {
@@ -185,7 +193,7 @@ object GlowPageIndicator {
                 val width = dotsWidth(numPages, d) + 24f * d
                 val h = 22f * d
                 rect.set(cx - width / 2f, cy - h / 2f, cx + width / 2f, cy + h / 2f)
-                drawPill(canvas, rect, d, dotsAlpha, onLightWallpaper)
+                drawPill(view, canvas, rect, dotsAlpha, onLightWallpaper)
                 drawDots(canvas, cx, cy, numPages, pos, d, dotsAlpha, GlowGlass.ON_GLASS)
             }
             else -> {
@@ -204,13 +212,19 @@ object GlowPageIndicator {
     private fun bareColor(onLightWallpaper: Boolean): Int =
         if (onLightWallpaper) GlowGlass.ON_LIGHT_WALLPAPER else GlowGlass.ON_GLASS
 
-    private fun drawPill(canvas: Canvas, r: RectF, d: Float, alpha: Float, onLightWallpaper: Boolean) {
-        pillFill.color = GlowGlass.fillColor(GlowGlass.Level.PILL, onLightWallpaper, alpha)
-        pillStroke.color = GlowGlass.strokeColor(GlowGlass.Level.PILL, alpha)
-        pillStroke.strokeWidth = max(1f, 0.8f * d)
-        val radius = r.height() / 2f
-        canvas.drawRoundRect(r, radius, radius, pillFill)
-        canvas.drawRoundRect(r, radius, radius, pillStroke)
+    private fun drawPill(view: View, canvas: Canvas, r: RectF, alpha: Float, onLightWallpaper: Boolean) {
+        var glass = pills[view]
+        if (glass == null || glass.onLight != onLightWallpaper) {
+            glass = GlowGlassDrawable(view.context, r.height() / 2f, GlowGlass.Level.PILL, onLightWallpaper)
+            // Only the real home screen indicator blurs; previews in sheets stay light
+            if (view is com.android.launcher3.pageindicators.PageIndicatorDots) glass.bindBlur(view, 24)
+            pills[view] = glass
+        }
+        glass.radius = r.height() / 2f
+        r.roundOut(pillBounds)
+        glass.bounds = pillBounds
+        glass.alpha = (255 * alpha.coerceIn(0f, 1f)).toInt()
+        glass.draw(canvas)
     }
 
     private fun drawDots(

@@ -421,6 +421,11 @@ public class DeviceProfile {
                 .firstCached(preferenceManager2.getPageIndicatorHeightFactor());
         mWorkspacePageIndicatorOverlapWorkspace =
                 res.getDimensionPixelSize(R.dimen.workspace_page_indicator_overlap_workspace);
+        // Glow: the "Search" pill sits between the last icon row and the dock; keep the
+        // workspace clear of it so labels never run under the pill
+        mGlowSearchPillReserve = app.lawnchair.views.GlowPageIndicator.STYLE_SEARCH.equals(
+                app.lawnchair.views.GlowPageIndicator.getStyle(context))
+                ? Math.round(GLOW_SEARCH_PILL_RESERVE_DP * res.getDisplayMetrics().density) : 0;
 
         overviewProfile = OverviewProfile.Factory.createOverviewProfile(res);
 
@@ -1741,6 +1746,9 @@ public class DeviceProfile {
      * Updates {@link #workspacePadding} as a result of any internal value change to reflect the
      * new workspace padding
      */
+    private int mGlowSearchPillReserve;
+    private static final float GLOW_SEARCH_PILL_RESERVE_DP = 40f;
+
     private void updateWorkspacePadding() {
         Rect padding = workspacePadding;
         if (isVerticalBarLayout()) {
@@ -1797,6 +1805,7 @@ public class DeviceProfile {
             paddingBottom = bottomHotseatReserve
                     + Math.round((paddingBottom - bottomHotseatReserve) * workspacePaddingVerticalFactor);
 
+            paddingBottom += mGlowSearchPillReserve;
             padding.set(paddingLeft, paddingTop, paddingRight, paddingBottom);
         }
         insetPadding(workspacePadding, cellLayoutPaddingPx);

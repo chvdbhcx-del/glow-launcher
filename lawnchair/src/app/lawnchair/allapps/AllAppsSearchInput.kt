@@ -200,7 +200,7 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
 
                 val backgroundAlpha by animateIntAsState(
                     when {
-                        atBottom -> if (isFocused || !queryEmpty) 34 else 24
+                        atBottom -> if (isFocused || !queryEmpty) 46 else 34
                         isFocused || !queryEmpty -> 0
                         else -> 100
                     },
@@ -213,7 +213,7 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
                     backgroundColor = backgroundColor,
                     backgroundAlpha = backgroundAlpha,
                     cornerRadius = 1f,
-                    strokeColor = if (atBottom) Color.argb(110, 255, 255, 255) else null,
+                    strokeColor = if (atBottom) Color.argb(72, 255, 255, 255) else null,
                     strokeWidth = if (atBottom) resources.displayMetrics.density else 0f,
                 )
 

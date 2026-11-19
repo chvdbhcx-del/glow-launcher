@@ -21,8 +21,6 @@ import android.app.ActivityManager
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.InsetDrawable
 import android.util.TypedValue
 import android.view.Gravity
@@ -60,14 +58,17 @@ object GlowGlass {
      * landing), everything that closes uses [EXIT]; small pop-ups get [POP].
      */
     object Motion {
-        const val SHORT = 150L
-        const val MEDIUM = 240L
-        const val LONG = 320L
+        const val SHORT = 180L
+        const val MEDIUM = 280L
+        const val LONG = 400L
 
-        @JvmField val ENTER: Interpolator = PathInterpolator(0.05f, 0.7f, 0.1f, 1f)
-        @JvmField val EXIT: Interpolator = PathInterpolator(0.3f, 0f, 0.8f, 0.15f)
-        @JvmField val STANDARD: Interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
-        @JvmField val POP: Interpolator = OvershootInterpolator(1.1f)
+        /** Opening: starts gently, glides to a soft stop (no jump on the first frame). */
+        @JvmField val ENTER: Interpolator = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
+
+        /** Closing: eases in and eases out, so nothing stops dead at the end. */
+        @JvmField val EXIT: Interpolator = PathInterpolator(0.4f, 0f, 0.2f, 1f)
+        @JvmField val STANDARD: Interpolator = PathInterpolator(0.25f, 0.1f, 0.25f, 1f)
+        @JvmField val POP: Interpolator = OvershootInterpolator(0.7f)
     }
 
     /** Minimum touch target recommended by Android accessibility guidelines. */
@@ -94,14 +95,10 @@ object GlowGlass {
     fun isLightWallpaper(context: Context): Boolean =
         runCatching { Themes.getAttrBoolean(context, R.attr.isWorkspaceDarkText) }.getOrDefault(false)
 
-    fun drawable(context: Context, radiusPx: Float, level: Level): GradientDrawable {
-        val light = isLightWallpaper(context)
-        return GradientDrawable().apply {
-            cornerRadius = radiusPx
-            setColor(fillColor(level, light))
-            setStroke(max(1, dp(context, 1)), strokeColor(level))
-        }
-    }
+    /** The glass material: translucent gradient fill, top sheen and a light-catching rim. */
+    @JvmStatic
+    fun drawable(context: Context, radiusPx: Float, level: Level): GlowGlassDrawable =
+        GlowGlassDrawable(context, radiusPx, level)
 
     /** Fill of the glass [level]: white frost on dark wallpapers, a dark tint on light ones. */
     @JvmStatic
@@ -123,27 +120,37 @@ object GlowGlass {
      * A glass pill with a [heightDp] visual height but a touch area of at least 48dp:
      * the background is inset vertically, the view itself stays tall.
      */
-    fun pill(context: Context, label: CharSequence, heightDp: Int, textSp: Float = 13f, bold: Boolean = true): TextView =
+    fun pill(
+        context: Context,
+        label: CharSequence,
+        heightDp: Int,
+        textSp: Float = 14f,
+        bold: Boolean = false,
+        realBlur: Boolean = false,
+    ): TextView =
         TextView(context).apply {
             text = label
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, textSp)
-            typeface = if (bold) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = Typeface.create(if (bold) "sans-serif" else "sans-serif-medium", if (bold) Typeface.BOLD else Typeface.NORMAL)
+            letterSpacing = 0.01f
             gravity = Gravity.CENTER
             includeFontPadding = false
-            val pad = dp(context, 14)
-            setPadding(pad, 0, pad, 0)
+            maxLines = 1
             val inset = max(0, (dp(context, MIN_TOUCH_DP) - dp(context, heightDp)) / 2)
-            background = insetPill(context, heightDp, inset)
+            val glass = GlowGlassDrawable(context, dp(context, heightDp) / 2f, Level.PILL)
+            if (realBlur) glass.bindBlur(this)
+            // setBackground() replaces the padding with the drawable's, so pad afterwards
+            background = InsetDrawable(glass, 0, inset, 0, inset)
+            val pad = dp(context, 16)
+            setPadding(pad, 0, pad, 0)
+            minWidth = dp(context, MIN_TOUCH_DP + 16)
             minHeight = dp(context, MIN_TOUCH_DP)
             minimumHeight = dp(context, MIN_TOUCH_DP)
             isClickable = true
             isFocusable = true
             asButton(this)
         }
-
-    private fun insetPill(context: Context, heightDp: Int, inset: Int): Drawable =
-        InsetDrawable(drawable(context, dp(context, heightDp) / 2f, Level.PILL), 0, inset, 0, inset)
 
     /** TalkBack announces the view as a button. */
     fun asButton(view: View) {

@@ -1,6 +1,7 @@
 package app.lawnchair.hotseat
 
 import android.content.Context
+import android.graphics.Canvas
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -35,6 +36,24 @@ class HotseatPagedView @JvmOverloads constructor(
 
     init {
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        // Glow: the edit-mode "−" badges and the wiggle reach a little above and around
+        // the icons. Clip only horizontally (neighbour pages), never vertically.
+        clipChildren = false
+        clipToPadding = false
+    }
+
+    override fun dispatchDraw(canvas: Canvas) {
+        val save = canvas.save()
+        // A few dp of slack at the sides: neighbour pages start a full page away
+        val slack = 6f * resources.displayMetrics.density
+        canvas.clipRect(
+            scrollX - slack,
+            -height.toFloat(),
+            scrollX + width + slack,
+            2f * height,
+        )
+        super.dispatchDraw(canvas)
+        canvas.restoreToCount(save)
     }
 
     fun setPageIndicator(indicator: PageIndicatorDots?) {

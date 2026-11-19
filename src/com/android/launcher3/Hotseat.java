@@ -28,9 +28,7 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Rect;
-import android.graphics.drawable.GradientDrawable;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -121,7 +119,7 @@ public class Hotseat extends FrameLayout implements Insettable {
     PreferenceManager preferenceManager;
 
     // Glow: dock plate around the icons only; the search bar sits above it
-    @Nullable private GradientDrawable mDockPlate;
+    @Nullable private app.lawnchair.views.GlowGlassDrawable mDockPlate;
     private float mPlateCenterY;
     private float mPlateHalfHeight;
 
@@ -220,20 +218,19 @@ public class Hotseat extends FrameLayout implements Insettable {
     private void setUpBackground() {
         if(!preferenceManager.getHotseatBG().get()) return;
 
-        var bgColor = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatBackgroundColor());
         var transparency = preferenceManager.getHotseatBGAlpha().get();
         var alphaValue = (transparency * 255) / 100;
-        var baseColor = bgColor.getColorPreferenceEntry().getLightColor().invoke(getContext());
-        var finalColor = Color.argb(alphaValue, Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
         float cornerRadiusDp = PreferenceCacheExtensionsKt.firstCached(
                 preferenceManager2.getHotseatBackgroundCornerRadius());
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(finalColor);
-        background.setCornerRadius(dpToPx(cornerRadiusDp));
-        // Glow: thin light rim so the translucent dock reads as frosted glass
-        background.setStroke(Math.max(1, Math.round(dpToPx(1f))),
-                Color.argb(Math.min(255, alphaValue + 60), 255, 255, 255));
-        mDockPlate = background;
+        // Glow: the dock is a pane of frosted glass: the wallpaper behind it is blurred,
+        // with a soft gradient fill and a rim that catches the light
+        var context = getContext();
+        mDockPlate = new app.lawnchair.views.GlowGlassDrawable(context, dpToPx(cornerRadiusDp),
+                app.lawnchair.views.GlowGlass.Level.CARD,
+                app.lawnchair.views.GlowGlass.isLightWallpaper(context),
+                Math.round(alphaValue * 0.75f));
+        mDockPlate.setCallback(mIconsContainer);
+        mDockPlate.bindBlur(mIconsContainer, 30);
     }
 
     private float dpToPx(float dp) {
@@ -639,26 +636,23 @@ public class Hotseat extends FrameLayout implements Insettable {
             int dockTop = Math.round(containerTop + mPlateCenterY - mPlateHalfHeight);
             if (qsbAbove) dockTop = Math.min(dockTop, qsbTop);
             mGlowDockTop = dockTop;
-            post(this::alignGlowPageIndicator);
+            post(this::invalidateGlowPageIndicator);
         }
     }
 
     private int mGlowDockTop = -1;
 
-    /** Glow: moves the workspace page indicator so its bottom sits 8dp above the dock. */
-    private void alignGlowPageIndicator() {
-        if (mWorkspace == null || mGlowDockTop < 0 || getHeight() == 0) return;
-        View indicator = (View) mWorkspace.getPageIndicator();
-        if (indicator == null || indicator.getHeight() == 0
-                || !(indicator.getLayoutParams() instanceof FrameLayout.LayoutParams lp)
-                || indicator.getParent() != getParent()) {
-            return;
-        }
-        int wantedBottom = getTop() + mGlowDockTop - Math.round(dpToPx(8f));
-        int delta = indicator.getBottom() - wantedBottom;
-        if (Math.abs(delta) > 1) {
-            lp.bottomMargin += delta;
-            indicator.setLayoutParams(lp);
+    /**
+     * Glow: top edge of the dock plate in the parent's (drag layer's) coordinates, or -1.
+     * The home "Search" pill positions itself from this, so it always keeps its gap.
+     */
+    public int getGlowDockTop() {
+        return mGlowDockTop < 0 ? -1 : getTop() + mGlowDockTop;
+    }
+
+    private void invalidateGlowPageIndicator() {
+        if (mWorkspace != null && mWorkspace.getPageIndicator() instanceof View indicator) {
+            indicator.invalidate();
         }
     }
 

@@ -58,7 +58,7 @@ fun LazyListScope.preferenceGroupItems(
                     HorizontalDivider(
                         modifier = Modifier,
                         thickness = 3.dp,
-                        color = MaterialTheme.colorScheme.surface,
+                        color = androidx.compose.ui.graphics.Color.Transparent,
                     )
                 }
                 itemContent(it)
@@ -107,6 +107,7 @@ fun PreferenceGroupItem(
     Surface(
         modifier = modifier.padding(horizontal = 16.dp),
         shape = shape,
+        color = androidx.compose.ui.graphics.Color.Transparent,
     ) {
         content()
     }

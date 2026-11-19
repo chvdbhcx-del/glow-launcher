@@ -48,8 +48,8 @@ fun PreferenceTemplate(
     shapes: ListItemShapes = ListItemDefaults.shapes(),
     onClick: (() -> Unit)? = null,
     colors: ListItemColors = ListItemDefaults.segmentedColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = app.lawnchair.ui.theme.GlowSettingsColors.Card,
+        disabledContainerColor = app.lawnchair.ui.theme.GlowSettingsColors.Card,
         supportingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ),
     interactionSource: MutableInteractionSource? = null,

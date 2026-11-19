@@ -54,6 +54,7 @@ import com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Predicate
+import kotlin.math.roundToInt
 
 /**
  * Glow "App Library" (iOS style): the app drawer shows automatic categories as glass tiles.
@@ -87,8 +88,49 @@ class GlowAppLibraryView @JvmOverloads constructor(
         isVerticalScrollBarEnabled = false
         overScrollMode = OVER_SCROLL_NEVER
         clipToPadding = false
-        isVerticalFadingEdgeEnabled = true
-        setFadingEdgeLength(dp(32))
+        // No built-in fading edge: with clipToPadding=false it fades at the padding line and
+        // leaves a hard band below it. The library masks the true edges itself (drawChild).
+        isVerticalFadingEdgeEnabled = false
+    }
+
+    private val edgeMask = android.graphics.Paint().apply {
+        xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT)
+    }
+    private var topMask: android.graphics.Shader? = null
+    private var bottomMask: android.graphics.Shader? = null
+    private var maskSize = 0
+
+    private fun topFade() = dp(TOP_FADE_DP)
+    private fun bottomFade() = bottomInset + dp(BOTTOM_FADE_DP)
+
+    /** Fades the tiles out softly under the search bar and above the gesture bar. */
+    override fun drawChild(canvas: android.graphics.Canvas, child: View, drawingTime: Long): Boolean {
+        if (child !== tiles || width == 0 || height == 0) return super.drawChild(canvas, child, drawingTime)
+        val h = height.toFloat()
+        val size = height * 31 + bottomFade()
+        if (size != maskSize) {
+            maskSize = size
+            topMask = android.graphics.LinearGradient(
+                0f, 0f, 0f, topFade().toFloat(),
+                Color.BLACK, Color.TRANSPARENT, android.graphics.Shader.TileMode.CLAMP,
+            )
+            bottomMask = android.graphics.LinearGradient(
+                0f, h - bottomFade(), 0f, h,
+                intArrayOf(Color.TRANSPARENT, 0x99000000.toInt(), Color.BLACK),
+                floatArrayOf(0f, 0.55f, 1f),
+                android.graphics.Shader.TileMode.CLAMP,
+            )
+        }
+        val save = canvas.saveLayer(0f, 0f, width.toFloat(), h, null)
+        val result = super.drawChild(canvas, child, drawingTime)
+        if (tiles.canScrollVertically(-1)) {
+            edgeMask.shader = topMask
+            canvas.drawRect(0f, 0f, width.toFloat(), topFade().toFloat(), edgeMask)
+        }
+        edgeMask.shader = bottomMask
+        canvas.drawRect(0f, h - bottomFade(), width.toFloat(), h, edgeMask)
+        canvas.restoreToCount(save)
+        return result
     }
 
     private var folderOverlay: View? = null
@@ -115,7 +157,9 @@ class GlowAppLibraryView @JvmOverloads constructor(
     fun setBottomInset(bottom: Int) {
         bottomInset = bottom
         val side = dp(SIDE_PADDING_DP)
-        tiles.setPadding(side, dp(4), side, bottom + dp(24))
+        tiles.setPadding(side, dp(10), side, bottom + dp(BOTTOM_FADE_DP) + dp(8))
+        maskSize = 0
+        invalidate()
         listView?.setPadding(0, 0, 0, bottom + dp(24))
     }
 
@@ -212,56 +256,71 @@ class GlowAppLibraryView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Geometry of a tile: four equal slots with the same spacing between the slots as
+     * around them, so big icons and the mini grid line up on one grid.
+     */
+    private class TileGeometry(tileSize: Int, density: Float) {
+        val space = (tileSize * TILE_SPACE_RATIO).roundToInt().coerceAtLeast((8 * density).roundToInt())
+        val slot = ((tileSize - 3 * space) / 2).coerceAtLeast(1)
+        // Spread any rounding leftover evenly on both sides
+        val pad = (tileSize - 2 * slot - space) / 2
+        val radius = tileSize * TILE_RADIUS_RATIO
+
+        fun left(index: Int) = pad + (index % 2) * (slot + space)
+        fun top(index: Int) = pad + (index / 2) * (slot + space)
+    }
+
     private fun createTile(category: Category, tileSize: Int): View {
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
         }
-        val pad = dp(12)
-        val innerGap = dp(10)
-        val cell = (tileSize - 2 * pad - innerGap) / 2
+        val geo = TileGeometry(tileSize, density)
         val square = FrameLayout(context).apply {
-            background = GlowGlass.drawable(context, dp(26).toFloat(), GlowGlass.Level.TILE)
+            background = GlowGlass.drawable(context, geo.radius, GlowGlass.Level.TILE)
             clipChildren = false
+            clipToPadding = false
         }
         val apps = category.apps
         val bigCount = if (apps.size <= 4) apps.size else 3
         for (i in 0 until bigCount) {
-            square.addView(createBigIcon(apps[i]), cellParams(i, cell, pad, innerGap))
+            addBigIcon(square, apps[i], geo, i)
         }
         if (apps.size > 4) {
             val rest = apps.size - 3
             square.addView(
-                createMiniGrid(apps.subList(3, minOf(7, apps.size)), cell, category.label, rest) {
+                createMiniGrid(apps.subList(3, minOf(7, apps.size)), geo.slot, category.label, rest) {
                     openCategory(category, square)
                 },
-                cellParams(3, cell, pad, innerGap),
+                LayoutParams(geo.slot, geo.slot).apply {
+                    leftMargin = geo.left(3)
+                    topMargin = geo.top(3)
+                },
             )
         }
         column.addView(square, LinearLayout.LayoutParams(tileSize, tileSize))
         column.addView(TextView(context).apply {
             text = category.label
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(GlowGlass.ON_GLASS)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            letterSpacing = 0.01f
+            includeFontPadding = false
             gravity = Gravity.CENTER
             maxLines = 1
-            setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0x88000000.toInt())
-            minHeight = dp(GlowGlass.MIN_TOUCH_DP - 16)
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setShadowLayer(dp(3).toFloat(), 0f, dp(1).toFloat(), 0x66000000)
+            minHeight = dp(GlowGlass.MIN_TOUCH_DP - 18)
             setOnClickListener { openCategory(category, square) }
             contentDescription = context.getString(R.string.glow_library_open_named, category.label, apps.size)
             GlowGlass.asHeading(this)
             GlowGlass.asButton(this)
-        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        }, LinearLayout.LayoutParams(tileSize, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp(6)
         })
         return column
     }
-
-    private fun cellParams(index: Int, cell: Int, pad: Int, gap: Int) =
-        LayoutParams(cell, cell).apply {
-            leftMargin = pad + (index % 2) * (cell + gap)
-            topMargin = pad + (index / 2) * (cell + gap)
-        }
 
     private fun bubble(app: AppInfo, parent: ViewGroup): BubbleTextView {
         val icon = LayoutInflater.from(context)
@@ -273,17 +332,35 @@ class GlowAppLibraryView @JvmOverloads constructor(
         return icon
     }
 
-    private fun createBigIcon(app: AppInfo): View =
-        bubble(app, this).apply {
-            setTextVisibility(false)
-            setCenterVertically(true)
-            // The label is hidden, so TalkBack needs the name explicitly
-            contentDescription = app.contentDescription ?: app.title
-        }
+    /**
+     * A big icon that fills its slot exactly. BubbleTextView draws its icon at a fixed size
+     * (with room for a label), so the view is made exactly icon-sized, the hidden label gets
+     * no space, and the view is scaled to the slot around its centre.
+     */
+    private fun addBigIcon(square: FrameLayout, app: AppInfo, geo: TileGeometry, index: Int) {
+        val view = bubble(app, square)
+        view.setTextVisibility(false)
+        view.setCenterVertically(false)
+        view.compoundDrawablePadding = 0
+        view.setPadding(0, 0, 0, 0)
+        val icon = view.iconSize.takeIf { it > 0 } ?: geo.slot
+        val scale = geo.slot.toFloat() / icon
+        view.pivotX = icon / 2f
+        view.pivotY = icon / 2f
+        view.scaleX = scale
+        view.scaleY = scale
+        // The label is hidden, so TalkBack needs the name explicitly
+        view.contentDescription = app.contentDescription ?: app.title
+        val offset = (geo.slot - icon) / 2
+        square.addView(view, LayoutParams(icon, icon).apply {
+            leftMargin = geo.left(index) + offset
+            topMargin = geo.top(index) + offset
+        })
+    }
 
     private fun createMiniGrid(
         apps: List<AppInfo>,
-        cell: Int,
+        slot: Int,
         label: String,
         count: Int,
         onClick: () -> Unit,
@@ -295,16 +372,22 @@ class GlowAppLibraryView @JvmOverloads constructor(
             contentDescription = context.getString(R.string.glow_library_more_apps, label, count)
             GlowGlass.asButton(this)
         }
-        val gap = dp(4)
-        val mini = (cell - gap) / 2
+        // Same proportions as the tile itself, one level smaller
+        val gap = (slot * MINI_GAP_RATIO).roundToInt().coerceAtLeast(dp(3))
+        val mini = (slot - gap) / 2
+        val start = (slot - 2 * mini - gap) / 2
+        // One row (5 or 6 apps in the category) sits in the middle of the slot, level with
+        // the big icon next to it, instead of hanging at the top
+        val rows = (apps.size + 1) / 2
+        val top = (slot - rows * mini - (rows - 1) * gap) / 2
         apps.forEachIndexed { i, app ->
             grid.addView(ImageView(context).apply {
                 setImageDrawable(app.newIcon(context))
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
             }, LayoutParams(mini, mini).apply {
-                leftMargin = (i % 2) * (mini + gap)
-                topMargin = (i / 2) * (mini + gap)
+                leftMargin = start + (i % 2) * (mini + gap)
+                topMargin = top + (i / 2) * (mini + gap)
             })
         }
         return grid
@@ -387,7 +470,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
                     card.scaleX = 0.9f
                     card.scaleY = 0.9f
                 }
-                card.animate().alpha(1f).setDuration(GlowGlass.Motion.SHORT).start()
+                card.animate().alpha(1f).setDuration(GlowGlass.Motion.SHORT)
+                    .setInterpolator(GlowGlass.Motion.STANDARD).start()
                 card.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f)
                     .setDuration(GlowGlass.Motion.LONG)
                     .setInterpolator(GlowGlass.Motion.ENTER)
@@ -676,7 +760,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 card.pivotY = 0f
                 if (placeOnOrigin(card, origin, animate = true)) {
                     card.animate().alpha(0f).setStartDelay(GlowGlass.Motion.SHORT / 2)
-                        .setDuration(GlowGlass.Motion.SHORT).start()
+                        .setDuration(GlowGlass.Motion.SHORT)
+                        .setInterpolator(GlowGlass.Motion.STANDARD).start()
                 }
             }
             overlay.animate().cancel()
@@ -697,7 +782,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
 
     private var folderCard: View? = null
     private var folderOrigin: java.lang.ref.WeakReference<View>? = null
-    private var blurStep = 0
+    private var blurRadius = 0f
 
     /**
      * Moves [card] (pivot at its top-left corner) onto [origin], the tile it opens from,
@@ -729,29 +814,34 @@ class GlowAppLibraryView @JvmOverloads constructor(
         return true
     }
 
-    /** Blurs the tiles behind an open category; the radius moves in a few steps to stay cheap. */
+    /** Blurs the tiles behind an open category; follows the fade smoothly, frame by frame. */
     private fun setTilesBlur(fraction: Float) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-        val step = Math.round(fraction.coerceIn(0f, 1f) * BLUR_STEPS)
-        if (step == blurStep) return
-        blurStep = step
-        val radius = 28 * density * step / BLUR_STEPS
+        val radius = 28 * density * fraction.coerceIn(0f, 1f)
+        if (kotlin.math.abs(radius - blurRadius) < 0.5f && (radius == 0f) == (blurRadius == 0f)) return
+        blurRadius = radius
         tiles.setRenderEffect(
-            if (step == 0) null else RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP),
+            if (radius < 0.5f) null else RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP),
         )
     }
 
     private fun dp(value: Int): Int = (value * density).toInt()
 
     companion object {
-        private const val SIDE_PADDING_DP = 18
-        private const val TILE_GAP_DP = 16
+        private const val SIDE_PADDING_DP = 20
+        private const val TOP_FADE_DP = 28
+        private const val BOTTOM_FADE_DP = 40
+        private const val TILE_GAP_DP = 18
+
+        /** Spacing inside a tile, as a share of its width (about 14dp on a phone). */
+        private const val TILE_SPACE_RATIO = 0.085f
+        private const val TILE_RADIUS_RATIO = 0.17f
+        private const val MINI_GAP_RATIO = 0.12f
         private const val PILL_HEIGHT_DP = 32
         private const val INDEX_WIDTH_DP = 30
         private const val RECENT_COUNT = 8
         private const val RECENT_WINDOW_MS = 14L * 24 * 60 * 60 * 1000
         private const val REBUILD_DELAY_MS = 300L
-        private const val BLUR_STEPS = 6
 
         /** package -> group, filled once per package; cleared for packages that change. */
         private val groupCache = ConcurrentHashMap<String, String>()
