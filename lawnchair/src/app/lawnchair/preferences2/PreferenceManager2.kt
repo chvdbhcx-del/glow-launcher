@@ -828,7 +828,8 @@ class PreferenceManager2 @Inject constructor(
 
     val doubleTapGestureHandler = serializablePreference<GestureHandlerConfig>(
         key = stringPreferencesKey("double_tap_gesture_handler"),
-        defaultValue = GestureHandlerConfig.Sleep,
+        // Glow: nothing by default, like iOS. Sleep needs root, accessibility or device admin
+        defaultValue = GestureHandlerConfig.NoOp,
     )
 
     val sleepMode = preference(
@@ -840,7 +841,8 @@ class PreferenceManager2 @Inject constructor(
 
     val swipeUpGestureHandler = serializablePreference<GestureHandlerConfig>(
         key = stringPreferencesKey("swipe_up_gesture_handler"),
-        defaultValue = GestureHandlerConfig.OpenAppDrawer,
+        // Glow: the App Library opens from the side, a swipe up does nothing unless chosen
+        defaultValue = GestureHandlerConfig.NoOp,
     )
 
     /** Swipe down gesture handler

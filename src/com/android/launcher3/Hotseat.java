@@ -137,7 +137,8 @@ public class Hotseat extends FrameLayout implements Insettable {
 
         preferenceManager2 = PreferenceManager2.getInstance(context);
         preferenceManager = PreferenceManager.getInstance(context);
-        HotseatMode hotseatMode = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatMode());
+        HotseatMode hotseatMode = app.lawnchair.views.GlowPageIndicator.effectiveHotseatMode(context,
+                PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatMode()));
         var hotseatEnabled = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.isHotseatEnabled());
 
         if (!hotseatEnabled) {

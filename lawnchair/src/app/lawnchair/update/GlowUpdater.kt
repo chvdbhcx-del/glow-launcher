@@ -58,6 +58,8 @@ object GlowUpdater {
     private const val RELEASES_URL =
         "https://api.github.com/repos/chvdbhcx-del/glow-launcher/releases?per_page=20"
     private const val AUTO_CHECK_INTERVAL_MS = 6L * 60 * 60 * 1000
+    /** No automatic update prompt during the first day after Glow is installed. */
+    private const val FIRST_RUN_QUIET_MS = 24L * 60 * 60 * 1000
     private const val MAX_API_BYTES = 2L * 1024 * 1024
     private const val MAX_APK_BYTES = 200L * 1024 * 1024
     private const val PREFS = "glow_updater"
@@ -67,6 +69,18 @@ object GlowUpdater {
 
     @Volatile private var busy = false
     @Volatile private var cancelled = false
+
+    /** An automatic offer that arrived while the user was busy (drawer, folder, menu open). */
+    private var pendingOffer: GlowUpdateLogic.Release? = null
+
+    /** A release the user chose to install before allowing installs from Glow. */
+    private var pendingInstall: GlowUpdateLogic.Release? = null
+
+    /** True when a dialog would not interrupt anything: plain home screen, nothing open. */
+    private fun isIdle(launcher: Launcher): Boolean =
+        launcher.isInState(com.android.launcher3.LauncherState.NORMAL) &&
+            com.android.launcher3.AbstractFloatingView.getTopOpenView(launcher) == null &&
+            !launcher.dragController.isDragging
 
     private val ownTag: String get() = BuildConfig.GLOW_RELEASE_TAG
 
@@ -81,6 +95,25 @@ object GlowUpdater {
     @JvmStatic
     fun maybeAutoCheck(launcher: Launcher) {
         if (!isSupported() || busy) return
+        // Back from the "Install unknown apps" settings with permission: continue the update
+        pendingInstall?.let { release ->
+            if (canInstall(launcher)) {
+                pendingInstall = null
+                download(launcher, release)
+                return
+            }
+        }
+        pendingOffer?.let { release ->
+            if (isIdle(launcher)) {
+                pendingOffer = null
+                offer(launcher, release, manual = false)
+            }
+            return
+        }
+        val installedAt = runCatching {
+            launcher.packageManager.getPackageInfo(launcher.packageName, 0).firstInstallTime
+        }.getOrDefault(0L)
+        if (System.currentTimeMillis() - installedAt < FIRST_RUN_QUIET_MS) return
         val prefs = prefs(launcher)
         if (!prefs.getBoolean(KEY_AUTO, true)) return
         val now = System.currentTimeMillis()
@@ -114,7 +147,7 @@ object GlowUpdater {
                 result.onFailure {
                     Log.w(TAG, "Update check failed", it)
                     if (manual) {
-                        Toast.makeText(launcher, R.string.glow_update_failed, Toast.LENGTH_LONG).show()
+                        Toast.makeText(launcher, R.string.glow_update_check_failed, Toast.LENGTH_LONG).show()
                     }
                 }
                 result.onSuccess { release ->
@@ -125,6 +158,11 @@ object GlowUpdater {
                         return@onSuccess
                     }
                     if (!manual && prefs(launcher).getString(KEY_DISMISSED, null) == release.tag) {
+                        return@onSuccess
+                    }
+                    if (!manual && !isIdle(launcher)) {
+                        // Shown on the next return to a quiet home screen instead
+                        pendingOffer = release
                         return@onSuccess
                     }
                     offer(launcher, release, manual)
@@ -226,6 +264,7 @@ object GlowUpdater {
 
     private fun download(launcher: Launcher, release: GlowUpdateLogic.Release) {
         if (!canInstall(launcher)) {
+            pendingInstall = release
             Toast.makeText(launcher, R.string.glow_update_allow_install, Toast.LENGTH_LONG).show()
             runCatching {
                 launcher.startActivity(

@@ -24,7 +24,6 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.View
 import app.lawnchair.hotseat.DisabledHotseat
-import app.lawnchair.hotseat.LawnchairHotseat
 import app.lawnchair.preferences.PreferenceManager
 import app.lawnchair.preferences2.PreferenceManager2
 import com.android.launcher3.Launcher
@@ -86,22 +85,27 @@ object GlowPageIndicator {
     fun getViewHeight(context: Context, style: String): Int =
         if (style == STYLE_SEARCH) (VIEW_HEIGHT_DP * context.resources.displayMetrics.density).toInt() else -1
 
-    /** Changes the style; the search style replaces the search bar above the dock. */
+    /**
+     * Changes the style. Only the search style touches the dock: it hides the old search
+     * bar there (two searches stacked above the dock). Other styles leave the dock search
+     * setting as the user set it instead of turning a search bar on behind their back.
+     */
     fun setStyle(launcher: Launcher, style: String) {
         val prefs = PreferenceManager.getInstance(launcher)
+        if (prefs.glowPageIndicatorStyle.get() == style) return
         MODEL_EXECUTOR.execute {
-            val prefs2 = PreferenceManager2.getInstance(launcher)
-            prefs2.hotseatMode.setBlocking(if (style == STYLE_SEARCH) DisabledHotseat else LawnchairHotseat)
-            MAIN_EXECUTOR.execute {
-                if (prefs.glowPageIndicatorStyle.get() == style) {
-                    launcher.recreate()
-                } else {
-                    // Recreates the launcher, which re-reads both preferences.
-                    prefs.glowPageIndicatorStyle.set(style)
-                }
+            if (style == STYLE_SEARCH) {
+                PreferenceManager2.getInstance(launcher).hotseatMode.setBlocking(DisabledHotseat)
             }
+            // Recreates the launcher, which re-reads both preferences
+            MAIN_EXECUTOR.execute { prefs.glowPageIndicatorStyle.set(style) }
         }
     }
+
+    /** The dock search bar mode in effect: none while the "Search" pill is shown. */
+    @JvmStatic
+    fun effectiveHotseatMode(context: Context, mode: app.lawnchair.hotseat.HotseatMode): app.lawnchair.hotseat.HotseatMode =
+        if (getStyle(context) == STYLE_SEARCH) DisabledHotseat else mode
 
     /** Bounds of the search pill, for touch handling. */
     @JvmStatic
@@ -124,6 +128,8 @@ object GlowPageIndicator {
     fun openSearch(launcher: Launcher) {
         val search = launcher.appsView.searchUiManager
         search.setDirectFocus(true)
+        // The field says what the user tapped ("Search"), not "App Library"
+        search.editText?.setHint(R.string.label_search)
         search.editText?.showKeyboard()
         launcher.stateManager.goToState(LauncherState.ALL_APPS)
     }

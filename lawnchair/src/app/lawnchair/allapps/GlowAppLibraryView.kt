@@ -190,6 +190,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 if (gen != generation) return@execute
                 categories = result
                 tilesAdapter.notifyDataSetChanged()
+                refreshOpenList()
             }
         }
     }
@@ -494,7 +495,18 @@ class GlowAppLibraryView @JvmOverloads constructor(
     private var listOverlay: View? = null
     private var listView: RecyclerView? = null
 
-    private fun openList() {
+    /** Rebuilds an open A-Z list in place (an app was installed, removed or renamed). */
+    private fun refreshOpenList() {
+        val list = listView ?: return
+        val lm = list.layoutManager as? LinearLayoutManager ?: return
+        val first = lm.findFirstVisibleItemPosition()
+        val offset = lm.findViewByPosition(first)?.top ?: 0
+        closeList(animate = false)
+        openList(animateIn = false)
+        if (first > 0) (listView?.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(first, offset)
+    }
+
+    private fun openList(animateIn: Boolean = true) {
         if (listOverlay != null) return
         val apps = appsProvider?.invoke() ?: return
         val collator = java.text.Collator.getInstance(Locale.getDefault())
@@ -516,7 +528,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
         }
         if (hasPrivateSpace?.invoke() == true && onShowAllApps != null) rows += Row.PrivateSpace
 
-        val animate = GlowGlass.animationsEnabled()
+        val animate = animateIn && GlowGlass.animationsEnabled()
         val overlay = FrameLayout(context).apply {
             alpha = if (animate) 0f else 1f
             isClickable = true
@@ -686,6 +698,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
         foreground = ta.getDrawable(0)
         ta.recycle()
         setOnClickListener(launcher.itemOnClickListener)
+        setOnLongClickListener { row ->
+            val icon = ((row as ViewGroup).getChildAt(1) as ViewGroup).getChildAt(0)
+                .let { (it as ViewGroup).getChildAt(0) }
+            icon != null && launcher.allAppsItemLongClickListener.onLongClick(icon)
+        }
         // divider
         addView(View(context).apply { setBackgroundColor(Color.argb(40, 255, 255, 255)) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, (density * 0.5f).toInt())).apply {
@@ -698,9 +715,10 @@ class GlowAppLibraryView @JvmOverloads constructor(
             minimumHeight = dp(GlowGlass.MIN_TOUCH_DP + 8)
             setPadding(dp(SIDE_PADDING_DP + 4), dp(6), dp(INDEX_WIDTH_DP), dp(6))
         }
-        row.addView(ImageView(context).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        // A real launcher icon (scaled to 42dp) so long-press opens the usual menu and drag
+        row.addView(FrameLayout(context).apply {
+            clipChildren = false
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         }, LinearLayout.LayoutParams(dp(42), dp(42)))
         row.addView(TextView(context).apply {
             setTextColor(Color.WHITE)
@@ -721,7 +739,24 @@ class GlowAppLibraryView @JvmOverloads constructor(
         view.contentDescription = app.contentDescription ?: app.title
         view.getChildAt(0).visibility = if (divider) VISIBLE else INVISIBLE
         val row = view.getChildAt(1) as LinearLayout
-        (row.getChildAt(0) as ImageView).setImageDrawable(app.newIcon(context))
+        val holder = row.getChildAt(0) as FrameLayout
+        holder.removeAllViews()
+        val icon = LayoutInflater.from(context)
+            .inflate(R.layout.all_apps_icon, holder, false) as BubbleTextView
+        icon.applyFromApplicationInfo(app)
+        icon.setTextVisibility(false)
+        icon.setCenterVertically(false)
+        icon.compoundDrawablePadding = 0
+        icon.setPadding(0, 0, 0, 0)
+        icon.isClickable = false
+        icon.isLongClickable = false
+        icon.isFocusable = false
+        val size = icon.iconSize.takeIf { it > 0 } ?: dp(42)
+        icon.pivotX = 0f
+        icon.pivotY = 0f
+        icon.scaleX = dp(42).toFloat() / size
+        icon.scaleY = icon.scaleX
+        holder.addView(icon, LayoutParams(size, size))
         (row.getChildAt(1) as TextView).text = app.title
     }
 
@@ -742,6 +777,9 @@ class GlowAppLibraryView @JvmOverloads constructor(
         }
         return true
     }
+
+    /** True while a category or the alphabetical list is open over the tiles. */
+    fun hasOpenOverlay(): Boolean = folderOverlay != null || listOverlay != null
 
     /** Closes an open category or the alphabetical list. Returns true if one was open. */
     fun closeCategory(animate: Boolean = true): Boolean {

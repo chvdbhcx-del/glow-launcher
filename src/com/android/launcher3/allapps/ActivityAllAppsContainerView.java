@@ -1351,6 +1351,17 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         updateSearchResultsVisibility();
     }
 
+    /** Glow: Back first closes an open category or the A-Z list of the App Library. */
+    public boolean glowCanHandleBack() {
+        return isGlowLibraryShown() && mGlowLibrary.hasOpenOverlay();
+    }
+
+    public void glowHandleBack() {
+        if (mGlowLibrary != null) {
+            mGlowLibrary.closeCategory(true);
+        }
+    }
+
     private boolean isGlowLibraryShown() {
         return mGlowLibrary != null && mGlowLibraryVisible && !isSearching();
     }

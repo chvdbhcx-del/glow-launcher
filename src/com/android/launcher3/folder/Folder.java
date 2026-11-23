@@ -153,6 +153,9 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         View.OnLongClickListener, DropTarget, TextView.OnEditorActionListener,
         View.OnFocusChangeListener, DragListener, ExtendedEditText.OnBackKeyListener,
         LauncherBindableItemsContainer {
+    /** Glow: the folder icon's label was hidden while the folder is open. */
+    private boolean mGlowHidLabel;
+
     private static final String TAG = "Launcher.Folder";
     private static final boolean DEBUG = false;
 
@@ -894,6 +897,11 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
             public void onAnimationStart(Animator animation) {
                 mFolderIcon.setIconVisible(false);
                 mFolderIcon.drawLeaveBehindIfExists();
+                // Glow: the open panel shows the title; hide the icon's own label under it
+                mGlowHidLabel = mFolderIcon.mFolderName.getVisibility() == View.VISIBLE;
+                if (mGlowHidLabel) {
+                    mFolderIcon.setTextVisible(false);
+                }
                 // Glow: blur and dim the home screen behind the folder
                 if (mActivityContext instanceof Launcher glowLauncher) {
                     app.lawnchair.views.GlowFolderBackdrop.show(glowLauncher);
@@ -1121,6 +1129,10 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
             }
             mFolderIcon.setVisibility(View.VISIBLE);
             mFolderIcon.setIconVisible(true);
+            if (mGlowHidLabel) {
+                mGlowHidLabel = false;
+                mFolderIcon.setTextVisible(true);
+            }
             mFolderIcon.mFolderName.setTextVisibility(true);
             if (wasAnimated) {
                 mFolderIcon.animateBgShadowAndStroke();

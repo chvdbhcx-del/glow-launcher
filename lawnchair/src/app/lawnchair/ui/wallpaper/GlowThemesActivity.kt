@@ -17,6 +17,7 @@
 package app.lawnchair.ui.wallpaper
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.WallpaperManager
 import android.graphics.Color
 import android.graphics.Outline
@@ -178,8 +179,17 @@ class GlowThemesActivity : Activity() {
         return card
     }
 
+    private var busy: AlertDialog? = null
+
     private fun applyTheme(theme: GlowTheme) {
+        if (busy != null) return
+        GlowWallpaperTarget.ask(this) { flags -> applyTheme(theme, flags) }
+    }
+
+    private fun applyTheme(theme: GlowTheme, which: Int) {
+        if (busy != null) return
         val appContext = applicationContext
+        busy = GlowWallpaperTarget.showBusy(this)
         executor.execute {
             val ok = runCatching {
                 resources.openRawResource(theme.wallpaper).use { stream ->
@@ -187,7 +197,7 @@ class GlowThemesActivity : Activity() {
                         stream,
                         null,
                         true,
-                        WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
+                        which,
                     )
                 }
             }.isSuccess
@@ -199,6 +209,8 @@ class GlowThemesActivity : Activity() {
                 }
             }
             runOnUiThread {
+                busy?.takeIf { !isDestroyed }?.dismiss()
+                busy = null
                 Toast.makeText(
                     appContext,
                     if (ok) R.string.glow_theme_applied else R.string.glow_wallpaper_failed,

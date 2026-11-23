@@ -332,7 +332,7 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
                 if (input.text.isNullOrEmpty() && input.hasFocus() && !input.isResetting) {
                     searchAlgorithm?.doZeroStateSearch(this)
                 }
-                if (input.text.toString() == "/lawnchairdebug") {
+                if (input.text.toString() == "/glowdebug") {
                     val enableDebugMenu = prefs.enableDebugMenu
                     enableDebugMenu.set(!enableDebugMenu.get())
                     launcher.stateManager.goToState(LauncherState.NORMAL)
@@ -346,7 +346,9 @@ class AllAppsSearchInput(context: Context, attrs: AttributeSet?) :
             },
         )
 
-        hideSearchBar = prefs2.hideAppDrawerSearchBar.firstCached()
+        // Glow: the App Library always keeps its search field, the "Search" pill types into it
+        hideSearchBar = prefs2.hideAppDrawerSearchBar.firstCached() &&
+            !app.lawnchair.allapps.GlowSideLibrary.isEnabled(launcher)
         if (hideSearchBar) {
             // GONE so top margin/height do not reserve empty space above the app list.
             isGone = true

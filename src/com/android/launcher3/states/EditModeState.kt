@@ -32,8 +32,8 @@ class EditModeState(id: Int) : LauncherState(id, StatsLogManager.LAUNCHER_STATE_
         const val DEPTH_15_PERCENT = 0.15f
 
         private val STATE_FLAGS =
+            // Glow: the workspace stays accessible so TalkBack reaches the "Remove" actions
             (FLAG_MULTI_PAGE or
-                FLAG_WORKSPACE_INACCESSIBLE or
                 FLAG_DISABLE_RESTORE or
                 FLAG_WORKSPACE_ICONS_CAN_BE_DRAGGED)
     }

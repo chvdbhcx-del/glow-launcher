@@ -49,7 +49,12 @@ class VerticalSwipeTouchController(
     init {
         launcher.lifecycleScope.launch {
             prefs.swipeUpGestureHandler.get()
-                .onEach { overrideSwipeUp = it != prefs.swipeUpGestureHandler.defaultValue && it !is GestureHandlerConfig.OpenAppDrawer }
+                .onEach {
+                    // Glow: the vertical drawer swipe is off on phones (the App Library is a side
+                    // page), so an explicit "open App Library" choice is handled here instead
+                    overrideSwipeUp = it != prefs.swipeUpGestureHandler.defaultValue &&
+                        (it !is GestureHandlerConfig.OpenAppDrawer || app.lawnchair.allapps.GlowSideLibrary.isEnabled(launcher))
+                }
                 .launchIn(this)
             prefs.swipeDownGestureHandler.get()
                 .onEach { overrideSwipeDown = it != prefs.swipeDownGestureHandler.defaultValue && it !is GestureHandlerConfig.OpenNotifications }

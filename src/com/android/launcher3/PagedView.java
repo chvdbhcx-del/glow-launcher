@@ -1514,6 +1514,15 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
                 if (endPull > 0.06f && mGlowDownOnLastPage) {
                     onPulledPastLastPage();
                 }
+            } else if (mGlowDownOnLastPage && getNextPage() == getPageCount() - 1) {
+                // Glow: before Android 12 EdgeEffect reports no pull distance, so measure
+                // how far the finger travelled past the last page instead
+                float travel = mOrientationHandler.getPrimaryDirection(ev,
+                        Math.max(0, ev.getActionIndex())) - mDownMotionPrimary;
+                boolean towardNext = mIsRtl ? travel > 0 : travel < 0;
+                if (towardNext && Math.abs(travel) > getWidth() * 0.18f) {
+                    onPulledPastLastPage();
+                }
             }
 
             mEdgeGlowLeft.onRelease(ev);

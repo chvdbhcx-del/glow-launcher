@@ -1102,6 +1102,7 @@
     <string name="glow_wallpaper_home">Home screen</string>
     <string name="glow_wallpaper_lock">Lock screen</string>
     <string name="glow_wallpaper_both">Home and lock screens</string>
+    <string name="glow_wallpaper_applying">Applying…</string>
     <string name="glow_wallpaper_applied">Wallpaper set</string>
     <string name="glow_wallpaper_failed">Couldn\'t set wallpaper</string>
     <string name="glow_app_lock">Lock app</string>
@@ -1110,6 +1111,7 @@
     <string name="glow_app_unlocked">App unlocked</string>
     <string name="glow_app_lock_needs_screen_lock">Set a screen lock in system settings to lock apps</string>
     <string name="glow_app_lock_prompt">Open %1$s</string>
+    <string name="glow_dock_search_pill_note">The Search button above the dock is on. To use a search bar in the dock, pick another page indicator style in Customize.</string>
     <string name="glow_app_share">Share</string>
     <string name="glow_theme_apply">Apply</string>
     <string name="glow_theme_applied">Theme applied</string>
@@ -1179,6 +1181,7 @@
     <string name="glow_update_checking">Checking for updates…</string>
     <string name="glow_update_latest">You have the latest version of Glow</string>
     <string name="glow_update_failed">Couldn\'t update Glow. Check the connection and try again.</string>
+    <string name="glow_update_check_failed">Couldn\'t check for updates. Check the connection and try again.</string>
     <string name="glow_update_available">Glow %1$s is available</string>
     <string name="glow_update_message">The update installs over the current version. Your home screen and settings stay as they are.</string>
     <string name="glow_update_install">Update</string>

@@ -45,10 +45,11 @@ class GlowAppLockActivity : Activity() {
     private val lockedUser: UserHandle? by lazy { parcelableExtra(EXTRA_USER) }
     private val packageNameToOpen: String? by lazy { intent.getStringExtra(EXTRA_PACKAGE) }
     private val shortcutId: String? by lazy { intent.getStringExtra(EXTRA_SHORTCUT) }
+    private val removeLockOnly: Boolean by lazy { intent.getBooleanExtra(EXTRA_REMOVE_LOCK, false) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (target == null || packageNameToOpen == null) {
+        if (packageNameToOpen == null || (target == null && !removeLockOnly)) {
             finish()
             return
         }
@@ -123,6 +124,13 @@ class GlowAppLockActivity : Activity() {
     }
 
     private fun onAuthenticated() {
+        if (removeLockOnly) {
+            // Turning the lock off needs the same proof as opening the app
+            GlowAppLock.setLocked(this, packageNameToOpen!!, lockedUser, false)
+            Toast.makeText(this, R.string.glow_app_unlocked, Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
         val launch = target ?: return finish()
         GlowAppLock.markUnlocked(this, packageNameToOpen!!, lockedUser)
         try {
@@ -180,7 +188,16 @@ class GlowAppLockActivity : Activity() {
         private const val EXTRA_USER = "glow.extra.USER"
         private const val EXTRA_PACKAGE = "glow.extra.PACKAGE"
         private const val EXTRA_SHORTCUT = "glow.extra.SHORTCUT"
+        private const val EXTRA_REMOVE_LOCK = "glow.extra.REMOVE_LOCK"
         private const val REQUEST_CONFIRM = 1
+
+        /** Asks for authentication, then removes the lock from the app (no launch). */
+        fun createRemoveLockIntent(context: Context, user: UserHandle?, packageName: String): Intent =
+            Intent(context, GlowAppLockActivity::class.java)
+                .putExtra(EXTRA_USER, user as Parcelable?)
+                .putExtra(EXTRA_PACKAGE, packageName)
+                .putExtra(EXTRA_REMOVE_LOCK, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
 
         fun createIntent(
             context: Context,

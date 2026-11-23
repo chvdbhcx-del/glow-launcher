@@ -555,7 +555,7 @@
     <string name="gesture_handler_open_assistant">Открыть приложение-ассистент</string>
     <string name="pick_app_for_gesture">Выбрать приложение</string>
     <string name="dt2s_admin_hint_title">Необходимы права администратора</string>
-    <string name="dt2s_admin_hint">Что бы выключить экран устройства, установите Glow как администратор устройства. Нажмите \"Открыть настройки\", затем нажмите \"Установить этого администратора устройства\"</string>
+    <string name="dt2s_admin_hint">Чтобы выключить экран устройства, установите Glow как администратор устройства. Нажмите \"Открыть настройки\", затем нажмите \"Установить этого администратора устройства\"</string>
     <string name="dt2s_admin_warning">Жесты для выключения экрана устройства будут выключены.</string>
     <string name="d2ts_recents_a11y_hint_title">Включить службу спец. возможностей</string>
     <string name="sleep_a11y_hint">Выключить экран устройства</string>

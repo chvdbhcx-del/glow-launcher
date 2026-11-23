@@ -407,7 +407,9 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     @Override
     protected void onPulledPastLastPage() {
         // Glow: like iOS, swiping left past the last home screen opens the App Library
-        if (mLauncher.isInState(LauncherState.NORMAL) && !mLauncher.isWorkspaceLocked()) {
+        // (phones only: on tablets the drawer is a bottom sheet that opens with a swipe up)
+        if (mLauncher.isInState(LauncherState.NORMAL) && !mLauncher.isWorkspaceLocked()
+                && app.lawnchair.allapps.GlowSideLibrary.isEnabled(mLauncher)) {
             mLauncher.getStateManager().goToState(LauncherState.ALL_APPS);
         }
     }

@@ -119,25 +119,17 @@ class GlowWallpaperActivity : Activity() {
         }
     }
 
+    private var busy: AlertDialog? = null
+
     private fun askWhereToApply(@DrawableRes res: Int) {
-        val labels = arrayOf(
-            getString(R.string.glow_wallpaper_home),
-            getString(R.string.glow_wallpaper_lock),
-            getString(R.string.glow_wallpaper_both),
-        )
-        val flags = intArrayOf(
-            WallpaperManager.FLAG_SYSTEM,
-            WallpaperManager.FLAG_LOCK,
-            WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
-        )
-        AlertDialog.Builder(this)
-            .setTitle(R.string.glow_wallpaper_apply)
-            .setItems(labels) { _, which -> applyWallpaper(res, flags[which]) }
-            .show()
+        if (busy != null) return
+        GlowWallpaperTarget.ask(this) { flags -> applyWallpaper(res, flags) }
     }
 
     private fun applyWallpaper(@DrawableRes res: Int, which: Int) {
+        if (busy != null) return
         val appContext = applicationContext
+        busy = GlowWallpaperTarget.showBusy(this)
         executor.execute {
             val ok = runCatching {
                 resources.openRawResource(res).use { stream ->
@@ -145,6 +137,8 @@ class GlowWallpaperActivity : Activity() {
                 }
             }.isSuccess
             runOnUiThread {
+                busy?.takeIf { !isDestroyed }?.dismiss()
+                busy = null
                 Toast.makeText(
                     appContext,
                     if (ok) R.string.glow_wallpaper_applied else R.string.glow_wallpaper_failed,

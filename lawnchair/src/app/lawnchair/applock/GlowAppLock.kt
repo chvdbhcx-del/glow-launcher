@@ -183,6 +183,14 @@ object GlowAppLock {
                 Toast.makeText(launcher, R.string.glow_app_lock_needs_screen_lock, Toast.LENGTH_LONG).show()
                 return
             }
+            if (locked && canLock(launcher)) {
+                // Removing the lock asks for the fingerprint / screen lock first,
+                // otherwise anyone holding the phone could turn it off in one tap
+                launcher.startActivity(
+                    GlowAppLockActivity.createRemoveLockIntent(launcher, mItemInfo.user, packageName),
+                )
+                return
+            }
             setLocked(launcher, packageName, mItemInfo.user, !locked)
             Toast.makeText(
                 launcher,

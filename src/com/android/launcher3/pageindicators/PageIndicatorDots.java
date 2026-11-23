@@ -499,6 +499,12 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
         mGlowStyle = isHome ? app.lawnchair.views.GlowPageIndicator.getStyle(getContext()) : null;
         mGlowOnLightWallpaper = isHome
                 && app.lawnchair.views.GlowGlass.isLightWallpaper(getContext());
+        // TalkBack sees the drawn pill as a "Search" button
+        boolean searchPill = app.lawnchair.views.GlowPageIndicator.STYLE_SEARCH.equals(mGlowStyle);
+        setClickable(searchPill);
+        setContentDescription(searchPill ? getContext().getString(R.string.label_search) : null);
+        setImportantForAccessibility(searchPill ? IMPORTANT_FOR_ACCESSIBILITY_YES
+                : IMPORTANT_FOR_ACCESSIBILITY_AUTO);
         invalidate();
     }
 
@@ -507,37 +513,115 @@ public class PageIndicatorDots extends View implements Insettable, PageIndicator
         return mGlowStyle;
     }
 
+    // Glow: touch tracking of the "Search" pill. A tap opens search; a swipe that starts on
+    // the pill is handed to the workspace so the pages still scroll under the finger.
+    private final android.graphics.PointF mGlowDown = new android.graphics.PointF();
+    private boolean mGlowTracking;
+    private boolean mGlowForwarding;
+
     @Override
     public boolean onTouchEvent(android.view.MotionEvent ev) {
         if (!app.lawnchair.views.GlowPageIndicator.STYLE_SEARCH.equals(mGlowStyle)) {
             return super.onTouchEvent(ev);
         }
-        // Only the search pill itself is touchable, the rest of the row passes through.
+        // Only the search pill itself is touchable (48dp tall), the rest of the row passes through.
         app.lawnchair.views.GlowPageIndicator.getSearchPillBounds(this, mGlowTouchRect);
+        float d = getResources().getDisplayMetrics().density;
+        float extra = Math.max(0f, (48f * d - mGlowTouchRect.height()) / 2f);
+        mGlowTouchRect.inset(0f, -extra);
         boolean inside = mGlowTouchRect.contains(ev.getX(), ev.getY());
+        int slop = android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop();
         switch (ev.getActionMasked()) {
             case android.view.MotionEvent.ACTION_DOWN:
-                if (inside) glowPress(true);
-                return inside;
+                if (!inside) return false;
+                mGlowDown.set(ev.getX(), ev.getY());
+                mGlowTracking = true;
+                mGlowForwarding = false;
+                glowPress(true);
+                return true;
+            case android.view.MotionEvent.ACTION_MOVE:
+                if (mGlowForwarding) {
+                    forwardToWorkspace(ev, ev.getActionMasked());
+                } else if (mGlowTracking) {
+                    float dx = ev.getX() - mGlowDown.x;
+                    float dy = ev.getY() - mGlowDown.y;
+                    if (Math.hypot(dx, dy) > slop) {
+                        mGlowTracking = false;
+                        glowPress(false);
+                        if (Math.abs(dx) > Math.abs(dy)) {
+                            // Replay the gesture on the workspace from where it started
+                            mGlowForwarding = true;
+                            android.view.MotionEvent down = android.view.MotionEvent.obtain(ev);
+                            down.setAction(android.view.MotionEvent.ACTION_DOWN);
+                            down.setLocation(mGlowDown.x, mGlowDown.y);
+                            forwardToWorkspace(down, android.view.MotionEvent.ACTION_DOWN);
+                            down.recycle();
+                            forwardToWorkspace(ev, android.view.MotionEvent.ACTION_MOVE);
+                        }
+                    }
+                }
+                return true;
             case android.view.MotionEvent.ACTION_CANCEL:
                 glowPress(false);
+                if (mGlowForwarding) forwardToWorkspace(ev, ev.getActionMasked());
+                mGlowTracking = false;
+                mGlowForwarding = false;
                 return true;
             case android.view.MotionEvent.ACTION_UP:
                 glowPress(false);
-                // The view is inflated with a theme wrapper (HomeScreenElementTheme), so
-                // getContext() is not the Launcher itself: look it up through the wrapper
-                com.android.launcher3.Launcher launcher = inside
-                        ? com.android.launcher3.Launcher.getLauncher(getContext()) : null;
-                if (launcher != null) {
-                    if (!launcher.isInState(com.android.launcher3.LauncherState.ALL_APPS)) {
-                        performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
-                        app.lawnchair.views.GlowPageIndicator.openSearch(launcher);
-                    }
+                if (mGlowForwarding) {
+                    forwardToWorkspace(ev, ev.getActionMasked());
+                } else if (mGlowTracking && inside) {
+                    glowOpenSearch();
                 }
+                mGlowTracking = false;
+                mGlowForwarding = false;
                 return true;
             default:
                 return true;
         }
+    }
+
+    private void forwardToWorkspace(android.view.MotionEvent ev, int action) {
+        com.android.launcher3.Launcher launcher;
+        try {
+            launcher = com.android.launcher3.Launcher.getLauncher(getContext());
+        } catch (RuntimeException e) {
+            return;
+        }
+        View workspace = launcher.getWorkspace();
+        if (workspace == null) return;
+        android.view.MotionEvent copy = android.view.MotionEvent.obtain(ev);
+        copy.setAction(action);
+        copy.offsetLocation(getLeft() + getTranslationX() - workspace.getLeft() - workspace.getTranslationX(),
+                getTop() + getTranslationY() - workspace.getTop() - workspace.getTranslationY());
+        workspace.dispatchTouchEvent(copy);
+        copy.recycle();
+    }
+
+    /** Opens search from the pill (tap or TalkBack); nothing happens in edit mode. */
+    private boolean glowOpenSearch() {
+        // The view is inflated with a theme wrapper (HomeScreenElementTheme), so
+        // getContext() is not the Launcher itself: look it up through the wrapper
+        com.android.launcher3.Launcher launcher;
+        try {
+            launcher = com.android.launcher3.Launcher.getLauncher(getContext());
+        } catch (RuntimeException e) {
+            return false;
+        }
+        if (!launcher.isInState(com.android.launcher3.LauncherState.NORMAL)) return false;
+        performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+        app.lawnchair.views.GlowPageIndicator.openSearch(launcher);
+        return true;
+    }
+
+    @Override
+    public boolean performClick() {
+        if (app.lawnchair.views.GlowPageIndicator.STYLE_SEARCH.equals(mGlowStyle)) {
+            super.performClick();
+            return glowOpenSearch();
+        }
+        return super.performClick();
     }
 
     /**

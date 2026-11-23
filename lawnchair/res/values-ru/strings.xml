@@ -25,6 +25,7 @@
     <string name="glow_wallpaper_home">Главный экран</string>
     <string name="glow_wallpaper_lock">Экран блокировки</string>
     <string name="glow_wallpaper_both">Оба экрана</string>
+    <string name="glow_wallpaper_applying">Применяем…</string>
     <string name="glow_wallpaper_applied">Обои установлены</string>
     <string name="glow_wallpaper_failed">Не удалось установить обои</string>
     <string name="glow_app_lock">Заблокировать</string>
@@ -33,6 +34,7 @@
     <string name="glow_app_unlocked">Приложение разблокировано</string>
     <string name="glow_app_lock_needs_screen_lock">Чтобы блокировать приложения, включите блокировку экрана в настройках</string>
     <string name="glow_app_lock_prompt">Открыть %1$s</string>
+    <string name="glow_dock_search_pill_note">Над доком включена кнопка «Поиск». Чтобы поставить строку поиска в док, выберите другой стиль индикатора страниц в разделе «Оформление».</string>
     <string name="glow_app_share">Поделиться</string>
     <string name="glow_theme_apply">Применить</string>
     <string name="glow_theme_applied">Тема применена</string>
@@ -102,6 +104,7 @@
     <string name="glow_update_checking">Проверяю обновления…</string>
     <string name="glow_update_latest">У вас последняя версия Glow</string>
     <string name="glow_update_failed">Не удалось обновить Glow. Проверьте интернет и попробуйте ещё раз.</string>
+    <string name="glow_update_check_failed">Не удалось проверить обновления. Проверьте интернет и попробуйте ещё раз.</string>
     <string name="glow_update_available">Доступна Glow %1$s</string>
     <string name="glow_update_message">Обновление установится поверх текущей версии. Рабочий стол и настройки сохранятся.</string>
     <string name="glow_update_install">Обновить</string>

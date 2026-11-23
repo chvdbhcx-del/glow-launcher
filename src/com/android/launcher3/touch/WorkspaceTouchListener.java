@@ -224,6 +224,8 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
 
     // Glow: a plain tap on empty home screen space leaves the iOS-style edit mode
     private boolean mEditTapCandidate;
+    /** When a tap last left edit mode: a second quick tap must not count as a double tap. */
+    private long mEditExitTime;
     private final PointF mEditTapDown = new PointF();
 
     private void trackEditModeTap(MotionEvent ev, int action) {
@@ -243,6 +245,7 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
             if (!mWorkspace.isHandlingTouch()
                     && ev.getEventTime() - ev.getDownTime() < 500
                     && mLauncher.isInState(EDIT_MODE)) {
+                mEditExitTime = ev.getEventTime();
                 mLauncher.getStateManager().goToState(NORMAL);
             }
         } else if (action == ACTION_CANCEL || action == ACTION_POINTER_DOWN) {
@@ -296,6 +299,13 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
     @Override
     public boolean onDoubleTap(MotionEvent event) {
         mDoubleTapPending = true;
+        // Glow: the double-tap gesture only belongs to the plain home screen, not to edit
+        // mode, an open folder or the tap that just left edit mode
+        if (!mLauncher.isInState(NORMAL)
+                || AbstractFloatingView.getTopOpenView(mLauncher) != null
+                || event.getEventTime() - mEditExitTime < 600) {
+            return true;
+        }
         Context context = mWorkspace.getContext();
         LawnchairLauncher launcher = Launcher.fromContext(context);
         launcher.getGestureController().onDoubleTap();
