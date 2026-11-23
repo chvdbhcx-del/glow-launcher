@@ -978,7 +978,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
 
             // 1. well-known apps, 2. Android's own app category, 3. package/label keywords,
             // 4. Flowerpot, 5. system apps -> utilities
-            for (app in apps) {
+            for (app in libraryUnique(apps)) {
                 val key = app.toComponentKey().toString()
                 if (!assigned.add(key)) continue
                 val pkg = app.targetPackage ?: continue
@@ -1000,7 +1000,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
             val byTitle = compareBy<AppInfo> { it.title?.toString()?.lowercase(Locale.getDefault()) ?: "" }
             val result = mutableListOf<Category>()
 
-            recentlyAdded(pm, apps).takeIf { it.isNotEmpty() }?.let {
+            recentlyAdded(pm, libraryUnique(apps)).takeIf { it.isNotEmpty() }?.let {
                 result += Category("recent", context.getString(R.string.glow_library_recent), it)
             }
             groups.filterKeys { it != GlowCategoryRules.OTHER }
@@ -1018,6 +1018,24 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 result += Category(GlowCategoryRules.OTHER, context.getString(R.string.glow_library_other), it.sortedWith(byTitle))
             }
             return result
+        }
+
+        /**
+         * One entry per app for the library tiles. The same app can reach the launcher several
+         * times: a clone ("Dual apps" / second space) or work-profile copy, or a second launcher
+         * activity with the same name. Those looked like duplicate icons side by side in a
+         * category, so only the first copy is kept, preferring the personal profile. Copies
+         * stay reachable from the A–Z list and search, which keep their profile badge.
+         */
+        @JvmStatic
+        fun libraryUnique(apps: List<AppInfo>): List<AppInfo> {
+            val main = android.os.Process.myUserHandle()
+            return apps
+                .sortedBy { if (it.user == main) 0 else 1 } // stable: keeps the original order otherwise
+                .distinctBy { app ->
+                    val pkg = app.targetPackage ?: app.toComponentKey().toString()
+                    pkg + "\u0000" + (app.title?.toString()?.trim()?.lowercase(Locale.ROOT) ?: "")
+                }
         }
 
         private fun androidCategory(info: ApplicationInfo): String? {
