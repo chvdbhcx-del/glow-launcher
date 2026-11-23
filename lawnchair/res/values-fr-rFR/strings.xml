@@ -683,7 +683,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">Recherche d\'applis</string>
     <string name="search_provider_custom">Personnalisé</string>
-    <string name="search_provider_sponsored_description">%1$s et Lawnchair ont signé un accord de partage des revenus.\n\nEn effectuant vos recherches avec %1$s, vous soutenez Lawnchair.</string>
     <string name="app_label">Application</string>
     <string name="website_label">Site Web</string>
     <string name="qsb_search_provider_app_required">Appli requise</string>

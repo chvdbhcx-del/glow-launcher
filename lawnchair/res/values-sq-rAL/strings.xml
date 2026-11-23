@@ -683,7 +683,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">App search</string>
     <string name="search_provider_custom">E veqantë</string>
-    <string name="search_provider_sponsored_description">%1$s and Lawnchair have a revenue share agreement.\n\nSearching with %1$s helps support Lawnchair.</string>
     <string name="app_label">Aplikacioni</string>
     <string name="website_label">Faqja e internetit</string>
     <string name="qsb_search_provider_app_required">App required</string>

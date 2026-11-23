@@ -71,7 +71,6 @@ import com.android.launcher3.util.DaggerSingletonObject
 import com.android.launcher3.util.DynamicResource
 import com.android.launcher3.util.SafeCloseable
 import com.patrykmichalik.opto.core.PreferenceManager
-import com.patrykmichalik.opto.core.firstBlocking
 import com.patrykmichalik.opto.core.setBlocking
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -984,16 +983,9 @@ class PreferenceManager2 @Inject constructor(
         scope.cancel()
     }
 
-    private fun getRemoteDefault(key: String): String? = liveInformationManager.liveInformation
-        .firstBlocking()
-        .features[key]
-        .also { value ->
-            if (value == null) {
-                Log.d(TAG, "getRemoteDefault: $key -> no remote default")
-            } else {
-                Log.d(TAG, "getRemoteDefault: $key -> $value")
-            }
-        }
+    // Glow: defaults never come from a remote server (Lawnchair's live information)
+    @Suppress("UNUSED_PARAMETER")
+    private fun getRemoteDefault(key: String): String? = null
 
     companion object {
         private val Context.preferencesDataStore by preferencesDataStore(

@@ -695,7 +695,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">Vyhľadávanie aplikácií</string>
     <string name="search_provider_custom">Vlastné</string>
-    <string name="search_provider_sponsored_description">%1$s A Lawnchair má zmluvu o zdieľanie prijmú.\n\nVyhladavanie pomocou %1$s pomáha podporiť Lawnchair.</string>
     <string name="app_label">Aplikácia</string>
     <string name="website_label">Webová stránka</string>
     <string name="qsb_search_provider_app_required">Vyžaduje sa aplikácia</string>

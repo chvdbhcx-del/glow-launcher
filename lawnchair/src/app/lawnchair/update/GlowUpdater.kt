@@ -92,8 +92,38 @@ object GlowUpdater {
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+    /** Set by the settings screen: run a manual check when the home screen comes back. */
+    @Volatile private var manualCheckRequested = false
+
+    /** Whether Glow looks for updates on its own (every few hours). */
+    @JvmStatic
+    fun isAutoCheckEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_AUTO, true)
+
+    @JvmStatic
+    fun setAutoCheckEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_AUTO, enabled).apply()
+    }
+
+    /** From settings: go home and check for updates there (the dialogs need the launcher). */
+    @JvmStatic
+    fun checkFromSettings(context: Context) {
+        manualCheckRequested = true
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                    .setPackage(context.packageName)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+
     @JvmStatic
     fun maybeAutoCheck(launcher: Launcher) {
+        if (manualCheckRequested) {
+            manualCheckRequested = false
+            checkNow(launcher)
+            return
+        }
         if (!isSupported() || busy) return
         // Back from the "Install unknown apps" settings with permission: continue the update
         pendingInstall?.let { release ->

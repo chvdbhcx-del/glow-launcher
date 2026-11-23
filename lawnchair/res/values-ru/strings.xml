@@ -19,6 +19,15 @@
     <string name="accessibility_smartspace_page">Страница %1$d из %2$d</string>
     <!-- Glow -->
     <string name="glow_themes">Темы</string>
+    <string name="glow_dock_glass_frost">Матовость стекла</string>
+    <string name="glow_about_release_notes">Что нового</string>
+    <string name="glow_about_source">Исходный код</string>
+    <string name="glow_about_based_on">Glow основан на Lawnchair и Launcher3 (лицензия Apache 2.0).</string>
+    <string name="glow_wallpaper_and_themes">Обои и темы</string>
+    <string name="glow_all_wallpapers">Все обои</string>
+    <string name="glow_updates">Обновления Glow</string>
+    <string name="glow_update_auto">Проверять автоматически</string>
+    <string name="glow_update_auto_description">Искать новую версию Glow каждые несколько часов</string>
     <string name="glow_exit_edit_mode">Выйти из режима редактирования</string>
     <string name="glow_more_wallpapers">Другие обои</string>
     <string name="glow_wallpaper_apply">Установить обои</string>

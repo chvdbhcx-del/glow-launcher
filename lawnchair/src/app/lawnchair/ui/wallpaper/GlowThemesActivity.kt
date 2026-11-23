@@ -73,19 +73,14 @@ class GlowThemesActivity : Activity() {
         }
         THEMES.forEach { list.addView(createCard(it)) }
 
-        list.addView(TextView(this).apply {
-            setText(R.string.glow_theme_more_settings)
-            setTextColor(ACCENT)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                cornerRadius = dp(26).toFloat()
-                setStroke(dp(2), ACCENT)
-            }
-            setOnClickListener {
-                startActivity(PreferenceActivity.createIntent(this@GlowThemesActivity, General))
-            }
+        list.addView(outlinedButton(R.string.glow_all_wallpapers) {
+            startActivity(android.content.Intent(this, GlowWallpaperActivity::class.java))
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52)).apply {
+            topMargin = dp(8)
+        })
+
+        list.addView(outlinedButton(R.string.glow_theme_more_settings) {
+            startActivity(PreferenceActivity.createIntent(this@GlowThemesActivity, General))
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52)).apply {
             topMargin = dp(8)
         })
@@ -96,7 +91,7 @@ class GlowThemesActivity : Activity() {
             fitsSystemWindows = true
         }
         root.addView(TextView(this).apply {
-            setText(R.string.glow_themes)
+            setText(R.string.glow_wallpaper_and_themes)
             setTextColor(Color.BLACK)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
             typeface = Typeface.DEFAULT_BOLD
@@ -106,6 +101,20 @@ class GlowThemesActivity : Activity() {
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f,
         ))
         setContentView(root)
+    }
+
+    private fun outlinedButton(@StringRes label: Int, onClick: () -> Unit) = TextView(this).apply {
+        setText(label)
+        setTextColor(ACCENT)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        background = GradientDrawable().apply {
+            cornerRadius = dp(26).toFloat()
+            setStroke(dp(2), ACCENT)
+        }
+        isClickable = true
+        setOnClickListener { onClick() }
     }
 
     private fun createCard(theme: GlowTheme): View {

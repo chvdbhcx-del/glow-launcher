@@ -58,10 +58,8 @@ import app.lawnchair.LawnchairLauncher
 import app.lawnchair.preferences.getAdapter
 import app.lawnchair.preferences.observeAsState
 import app.lawnchair.preferences.preferenceManager
-import app.lawnchair.preferences2.firstCached
 import app.lawnchair.preferences2.preferenceManager2
 import app.lawnchair.ui.OverflowMenuGrouped
-import app.lawnchair.ui.preferences.components.AnnouncementPreference
 import app.lawnchair.ui.preferences.components.controls.PreferenceCategory
 import app.lawnchair.ui.preferences.components.controls.WarningPreference
 import app.lawnchair.ui.preferences.components.layout.ClickableIcon
@@ -70,7 +68,6 @@ import app.lawnchair.ui.preferences.components.layout.PreferenceGroup
 import app.lawnchair.ui.preferences.components.layout.PreferenceLayout
 import app.lawnchair.ui.preferences.components.layout.PreferenceTemplate
 import app.lawnchair.ui.preferences.components.layout.ProvideDescriptionTextStyle
-import app.lawnchair.ui.preferences.data.liveinfo.SyncLiveInformation
 import app.lawnchair.ui.preferences.navigation.About
 import app.lawnchair.ui.preferences.navigation.AppDrawer
 import app.lawnchair.ui.preferences.navigation.BackupAndRestore
@@ -100,15 +97,10 @@ fun PreferencesDashboard(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    SyncLiveInformation()
     val prefs = preferenceManager()
     val prefs2 = preferenceManager2()
 
-    val aboutDescrption = if (prefs.hideVersionInfo.get()) {
-        prefs.pseudonymVersion.get()
-    } else {
-        "${context.getString(R.string.derived_app_name)} ${BuildConfig.MAJOR_VERSION}"
-    }
+    val aboutDescrption = "${context.getString(R.string.derived_app_name)} ${BuildConfig.VERSION_NAME}"
 
     PreferenceLayout(
         label = stringResource(id = R.string.settings),
@@ -117,8 +109,6 @@ fun PreferencesDashboard(
         backArrowVisible = false,
         actions = { PreferencesOverflowMenu(currentRoute = currentRoute, onNavigate = onNavigate) },
     ) {
-        AnnouncementPreference()
-
         if (BuildConfig.APPLICATION_ID.contains("nightly") || BuildConfig.DEBUG) {
             PreferencesDebugWarning()
             Spacer(modifier = Modifier.height(8.dp))
@@ -147,11 +137,11 @@ fun PreferencesDashboard(
                 isSelected = currentRoute is HomeScreen,
             )
 
-            val isSmartspaceEnabled = prefs2.enableSmartspace.firstCached()
             PreferenceCategory(
                 label = stringResource(id = R.string.smartspace_widget),
                 description = stringResource(R.string.smartspace_widget_description),
-                iconResource = if (isSmartspaceEnabled) R.drawable.ic_smartspace else R.drawable.ic_smartspace_off,
+                // Off by default in Glow; a crossed-out eye read like an error
+                iconResource = R.drawable.ic_smartspace,
                 onNavigate = { onNavigate(Smartspace) },
                 isSelected = currentRoute is Smartspace,
             )
@@ -300,7 +290,7 @@ fun RowScope.PreferencesOverflowMenu(
                     Text(text = stringResource(id = R.string.debug_restart_launcher))
                 },
             )
-            DropdownMenuItem(
+            if (BuildConfig.DEBUG) DropdownMenuItem(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Science,

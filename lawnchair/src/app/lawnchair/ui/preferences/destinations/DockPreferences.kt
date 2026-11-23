@@ -40,7 +40,6 @@ import app.lawnchair.ui.preferences.components.DummyLauncherLayout
 import app.lawnchair.ui.preferences.components.WallpaperPreview
 import app.lawnchair.ui.preferences.components.WithWallpaper
 import app.lawnchair.ui.preferences.components.clipToBottomPercentage
-import app.lawnchair.ui.preferences.components.colorpreference.ColorPreference
 import app.lawnchair.ui.preferences.components.controls.MainSwitchPreference
 import app.lawnchair.ui.preferences.components.controls.SliderPreference
 import app.lawnchair.ui.preferences.components.controls.SwitchPreference
@@ -94,7 +93,6 @@ fun DockPreferences(modifier: Modifier = Modifier) {
 @Composable
 fun HotseatBackgroundSettings(prefs: PreferenceManager, prefs2: PreferenceManager2) {
     DividerColumn {
-        ColorPreference(preference = prefs2.hotseatBackgroundColor)
         SliderPreference(
             label = stringResource(id = R.string.hotseat_bg_corner_radius),
             adapter = prefs2.hotseatBackgroundCornerRadius.getAdapter(),
@@ -103,39 +101,11 @@ fun HotseatBackgroundSettings(prefs: PreferenceManager, prefs2: PreferenceManage
             showUnit = "dp",
         )
         SliderPreference(
-            label = stringResource(id = R.string.hotseat_bg_alpha),
+            label = stringResource(id = R.string.glow_dock_glass_frost),
             adapter = prefs.hotseatBGAlpha.getAdapter(),
             step = 5,
             valueRange = 5..100,
             showUnit = "%",
-        )
-        SliderPreference(
-            label = stringResource(id = R.string.hotseat_bg_horizontal_inset_left),
-            adapter = prefs.hotseatBGHorizontalInsetLeft.getAdapter(),
-            step = 5,
-            valueRange = 0..100,
-            showUnit = "px",
-        )
-        SliderPreference(
-            label = stringResource(id = R.string.hotseat_bg_horizontal_inset_right),
-            adapter = prefs.hotseatBGHorizontalInsetRight.getAdapter(),
-            step = 5,
-            valueRange = 0..100,
-            showUnit = "px",
-        )
-        SliderPreference(
-            label = stringResource(id = R.string.hotseat_bg_vertical_inset_top),
-            adapter = prefs.hotseatBGVerticalInsetTop.getAdapter(),
-            step = 5,
-            valueRange = 0..100,
-            showUnit = "px",
-        )
-        SliderPreference(
-            label = stringResource(id = R.string.hotseat_bg_vertical_inset_bottom),
-            adapter = prefs.hotseatBGVerticalInsetBottom.getAdapter(),
-            step = 5,
-            valueRange = 0..100,
-            showUnit = "px",
         )
     }
 }

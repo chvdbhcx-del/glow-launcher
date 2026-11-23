@@ -201,8 +201,8 @@
     <string name="dock_label">Dock</string>
     <string name="dock_description">Search bar, icon count</string>
 
-    <string name="app_drawer_label">App drawer</string>
-    <string name="app_drawer_description">Hidden apps, column count, icons</string>
+    <string name="app_drawer_label">App Library</string>
+    <string name="app_drawer_description">Hidden apps, icons</string>
 
     <string name="drawer_search_label">Drawer search</string>
     <string name="drawer_search_description">Web suggestions, global search</string>
@@ -666,7 +666,7 @@
     <string name="gesture_handler_open_quick_settings">Open Quick Settings</string>
     <string name="gesture_handler_open_app_option">Open app</string>
     <string name="gesture_handler_open_app_config">Open %1$s</string>
-    <string name="gesture_handler_open_app_drawer">Open app drawer</string>
+    <string name="gesture_handler_open_app_drawer">Open App Library</string>
     <string name="gesture_handler_open_app_search">Open app search</string>
     <string name="gesture_handler_open_search">Open search</string>
     <string name="gesture_handler_open_assistant">Open assistant</string>
@@ -876,7 +876,7 @@
     <string name="search_provider_vivaldi" translatable="false">Vivaldi</string>
     <string name="search_provider_custom">Custom</string>
 
-    <string name="search_provider_sponsored_description">%1$s and Lawnchair have a revenue share agreement.\n\nSearching with %1$s helps support Lawnchair.</string>
+    <string name="search_provider_sponsored_description">%1$s is a sponsored search provider.</string>
 
     <string name="app_label">App</string>
     <string name="website_label">Website</string>
@@ -1096,6 +1096,15 @@
     <string name="please_wait">Please wait…</string>
     <!-- Glow -->
     <string name="glow_themes">Themes</string>
+    <string name="glow_dock_glass_frost">Glass frost</string>
+    <string name="glow_about_release_notes">What\'s new</string>
+    <string name="glow_about_source">Source code</string>
+    <string name="glow_about_based_on">Glow is based on Lawnchair and Launcher3 (Apache License 2.0).</string>
+    <string name="glow_wallpaper_and_themes">Wallpaper &amp; Themes</string>
+    <string name="glow_all_wallpapers">All wallpapers</string>
+    <string name="glow_updates">Glow updates</string>
+    <string name="glow_update_auto">Check automatically</string>
+    <string name="glow_update_auto_description">Look for a new Glow version every few hours</string>
     <string name="glow_exit_edit_mode">Exit edit mode</string>
     <string name="glow_more_wallpapers">More wallpapers</string>
     <string name="glow_wallpaper_apply">Set wallpaper</string>

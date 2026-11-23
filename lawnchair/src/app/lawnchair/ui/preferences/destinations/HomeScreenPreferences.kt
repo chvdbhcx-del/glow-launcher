@@ -91,10 +91,6 @@ fun HomeScreenPreferences(
                     enabled = lockHomeScreenAdapter.state.value.not(),
                 )
             }
-            GestureHandlerPreference(
-                adapter = prefs2.doubleTapGestureHandler.getAdapter(),
-                label = stringResource(id = R.string.gesture_double_tap),
-            )
             SwitchPreference(
                 prefs.infiniteScrolling.getAdapter(),
                 label = stringResource(id = R.string.infinite_scrolling_label),
@@ -177,8 +173,11 @@ fun HomeScreenPreferences(
                 description = stringResource(id = R.string.home_screen_lock_description),
             )
         }
-        PreferenceGroup(heading = stringResource(id = R.string.popup_menu)) {
-            LauncherPopupPreferenceItem()
+        // Glow: long-press opens edit mode; this menu only shows while the layout is locked
+        ExpandAndShrink(visible = lockHomeScreenAdapter.state.value) {
+            PreferenceGroup(heading = stringResource(id = R.string.popup_menu)) {
+                LauncherPopupPreferenceItem()
+            }
         }
         val showStatusBarAdapter = prefs2.showStatusBar.getAdapter()
         PreferenceGroup(heading = stringResource(id = R.string.status_bar_label)) {

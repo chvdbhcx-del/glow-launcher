@@ -677,7 +677,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">應用程式搜尋</string>
     <string name="search_provider_custom">自訂</string>
-    <string name="search_provider_sponsored_description">%1$s 和 Lawnchair 擁有共享收入協議。\n\n使用 %1$s 搜尋將可幫助 Lawnchair。</string>
     <string name="app_label">應用程式</string>
     <string name="website_label">網站</string>
     <string name="qsb_search_provider_app_required">需要應用程式</string>

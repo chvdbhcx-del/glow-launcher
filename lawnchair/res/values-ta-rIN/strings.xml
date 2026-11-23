@@ -683,7 +683,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">செயலி தேடல்</string>
     <string name="search_provider_custom">தனிப்பயன்</string>
-    <string name="search_provider_sponsored_description">%1$s மற்றும் Lawnchair வருவாய் பகிர்வு ஒப்பந்தத்தைக் கொண்டுள்ளன.\n\n%1$s உடன் தேடுவது Lawnchair ஐ ஆதரிக்க உதவுகிறது.</string>
     <string name="app_label">செயலி</string>
     <string name="website_label">இணையதளம்</string>
     <string name="qsb_search_provider_app_required">செயலி தேவை</string>

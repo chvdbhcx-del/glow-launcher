@@ -685,7 +685,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">Ricerca delle app</string>
     <string name="search_provider_custom">Personalizzato</string>
-    <string name="search_provider_sponsored_description">%1$s e Lawnchair hanno un accordo di condivisione dei profitti.\n\nLa ricerca tramite %1$s aiuta a supportare Lawnchair.</string>
     <string name="app_label">App</string>
     <string name="website_label">Sito web</string>
     <string name="qsb_search_provider_app_required">App necessaria</string>

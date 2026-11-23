@@ -18,7 +18,9 @@ package app.lawnchair.ui.preferences.destinations
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -47,7 +49,7 @@ import app.lawnchair.ui.preferences.components.layout.PreferenceGroup
 import app.lawnchair.ui.preferences.components.layout.PreferenceLayout
 import app.lawnchair.ui.preferences.components.notificationDotsEnabled
 import app.lawnchair.ui.preferences.components.notificationServiceEnabled
-import app.lawnchair.ui.preferences.data.liveinfo.liveInformationManager
+import app.lawnchair.ui.preferences.components.controls.ClickablePreference
 import app.lawnchair.ui.preferences.destinations.icons.ThemedIconsState
 import app.lawnchair.ui.preferences.navigation.GeneralAdvancedIcons
 import app.lawnchair.ui.preferences.navigation.GeneralIconPack
@@ -62,7 +64,6 @@ fun GeneralPreferences(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val prefs = preferenceManager()
     val prefs2 = preferenceManager2()
-    val liveInfoManager = liveInformationManager()
     val iconPacks by LocalPreferenceInteractor.current.iconPacks.collectAsStateWithLifecycle()
     val themedIconsAdapter = prefs.themedIcons.getAdapter()
     val drawerThemedIconsAdapter = prefs.drawerThemedIcons.getAdapter()
@@ -93,19 +94,24 @@ fun GeneralPreferences(modifier: Modifier = Modifier) {
                 description = stringResource(id = R.string.home_screen_rotation_description),
             )
         }
-        PreferenceGroup(heading = stringResource(id = R.string.updater)) {
-            if (BuildConfig.APPLICATION_ID.contains("nightly")) {
+        if (app.lawnchair.update.GlowUpdater.isSupported()) {
+            PreferenceGroup(heading = stringResource(id = R.string.glow_updates)) {
+                var autoCheck by remember { mutableStateOf(app.lawnchair.update.GlowUpdater.isAutoCheckEnabled(context)) }
                 SwitchPreference(
-                    adapter = prefs2.autoUpdaterNightly.getAdapter(),
-                    label = stringResource(id = R.string.auto_updater_label),
-                    description = stringResource(id = R.string.auto_updater_description),
+                    checked = autoCheck,
+                    onCheckedChange = {
+                        autoCheck = it
+                        app.lawnchair.update.GlowUpdater.setAutoCheckEnabled(context, it)
+                    },
+                    label = stringResource(id = R.string.glow_update_auto),
+                    description = stringResource(id = R.string.glow_update_auto_description),
+                )
+                ClickablePreference(
+                    label = stringResource(id = R.string.glow_update_check),
+                    subtitle = BuildConfig.VERSION_NAME,
+                    onClick = { app.lawnchair.update.GlowUpdater.checkFromSettings(context) },
                 )
             }
-            SwitchPreference(
-                adapter = liveInfoManager.enabled.getAdapter(),
-                label = stringResource(id = R.string.live_information_label),
-                description = stringResource(id = R.string.live_information_description),
-            )
         }
         ExpandAndShrink(visible = prefs2.enableFontSelection.asState().value) {
             PreferenceGroup(heading = stringResource(id = R.string.font_label)) {

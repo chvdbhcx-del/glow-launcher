@@ -677,7 +677,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">应用搜索</string>
     <string name="search_provider_custom">自定义</string>
-    <string name="search_provider_sponsored_description">%1$s 和 Lawnchair 有收益分成协议。\n\n使用 %1$s 进行搜索有助于支持 Lawnchair。</string>
     <string name="app_label">应用</string>
     <string name="website_label">网站</string>
     <string name="qsb_search_provider_app_required">未安装应用</string>
