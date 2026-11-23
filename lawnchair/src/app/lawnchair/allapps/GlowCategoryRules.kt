@@ -130,7 +130,13 @@ object GlowCategoryRules {
             "dictionary", "study", "university", "quiz", "photomath", "brainly", "coursera",
             "udemy", "khan", "освіта", "образование", "школа",
         ),
-        GAMES to setOf("game", "games", "gaming", "steam", "playgames", "epic", "roblox", "minecraft", "pubg"),
+        GAMES to setOf(
+            "game", "games", "gaming", "steam", "playgames", "epic", "roblox", "minecraft", "pubg",
+            "durak", "solitaire", "klondike", "poker", "chess", "checkers", "sudoku", "puzzle",
+            "mahjong", "domino", "dominoes", "backgammon", "nardy", "uno", "bingo", "slots",
+            "дурак", "пасьянс", "шахи", "шахматы", "шашки", "нарды", "нарди", "покер", "судоку",
+            "гра", "игра", "игры", "ігри",
+        ),
     )
 
     /**

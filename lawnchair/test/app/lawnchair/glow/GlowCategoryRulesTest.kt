@@ -56,6 +56,7 @@ class GlowCategoryRulesTest {
         assertEquals(GlowCategoryRules.SOCIAL, group("com.example.app", "Hivogram"))
         assertEquals(GlowCategoryRules.UTILITIES, group("com.example.app", "PixelBoard"))
         assertNull(group("com.example.app", "Diagram"))
+        assertEquals(GlowCategoryRules.GAMES, group("com.example.cards", "Дурак"))
     }
 
     @Test

@@ -63,7 +63,8 @@ object GlowMoveToCategory {
                 folders.map { it.second }.toTypedArray()
             val checked = if (picked == null) 0 else folders.indexOfFirst { it.first == picked } + 1
             val title = mItemInfo.title?.toString().orEmpty()
-            AlertDialog.Builder(launcher)
+            // Explicit dark dialog theme: the launcher theme gave dark-grey rows on a dark sheet
+            AlertDialog.Builder(launcher, android.R.style.Theme_Material_Dialog_Alert)
                 .setTitle(launcher.getString(R.string.glow_library_move_title, title))
                 .setSingleChoiceItems(labels, checked) { dialog, which ->
                     dialog.dismiss()
