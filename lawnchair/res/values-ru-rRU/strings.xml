@@ -30,7 +30,7 @@
     <string name="action_unlock">Разблокировать</string>
     <string name="action_lock">Заблокировать</string>
     <string name="action_apply">Применить</string>
-    <string name="action_customize">Настроить</string>
+    <string name="action_customize">Изменить значок и имя</string>
     <string name="always_choice">Всегда</string>
     <string name="never_choice">Никогда</string>
     <string name="clipboard">Буфер обмена</string>

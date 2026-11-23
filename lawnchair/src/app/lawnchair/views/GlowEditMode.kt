@@ -438,6 +438,12 @@ object GlowEditMode {
         return pressedContainer?.get() === container
     }
 
+    /** Same as dragging to "Remove": the item goes away with an "Undo" snackbar. */
+    private fun removeWithUndo(launcher: Launcher, view: View, info: ItemInfo) {
+        launcher.modelWriter.prepareToUndoDelete()
+        com.android.launcher3.DropTargetHandler(launcher).onDeleteComplete(info, view)
+    }
+
     private fun confirmRemove(launcher: Launcher, view: View) {
         val info = view.tag as? ItemInfo ?: return
         val title = info.title?.toString()?.takeIf { it.isNotBlank() }
@@ -463,7 +469,7 @@ object GlowEditMode {
         }.getOrDefault(false)
         if (pkg != null) {
             builder.setPositiveButton(R.string.glow_remove_from_home) { _, _ ->
-                launcher.removeItem(view, info, true, "Glow edit mode remove badge")
+                removeWithUndo(launcher, view, info)
             }
         }
         if (pkg != null && removable) {
@@ -478,7 +484,7 @@ object GlowEditMode {
             }
         } else if (pkg == null) {
             builder.setPositiveButton(R.string.glow_remove) { _, _ ->
-                launcher.removeItem(view, info, true, "Glow edit mode remove badge")
+                removeWithUndo(launcher, view, info)
             }
         }
         builder.show()

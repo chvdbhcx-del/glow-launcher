@@ -34,7 +34,7 @@
     <string name="action_lock">Lock</string>
 
     <string name="action_apply">Apply</string>
-    <string name="action_customize">Customize</string>
+    <string name="action_customize">Edit icon and name</string>
 
     <string name="always_choice">Always</string>
     <string name="never_choice">Never</string>
@@ -1174,7 +1174,7 @@
     <string name="glow_size_medium">Default</string>
     <string name="glow_size_large">Large</string>
     <string name="glow_grid_format">%1$d × %2$d</string>
-    <string name="glow_customize_indicator">Pages</string>
+    <string name="glow_customize_indicator">Indicator</string>
     <string name="glow_indicator_search">Search</string>
     <string name="glow_indicator_dots">Dots</string>
     <string name="glow_indicator_capsule">Capsule</string>

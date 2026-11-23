@@ -33,6 +33,7 @@ import android.widget.Button
 import android.widget.TextView
 import com.android.launcher3.R
 import com.android.launcher3.util.Themes
+import app.lawnchair.preferences2.firstCached
 import kotlin.math.max
 
 /**
@@ -45,7 +46,20 @@ import kotlin.math.max
  */
 object GlowGlass {
 
+    /** Glow violet: the default accent and the fallback when the theme has none. */
     const val ACCENT = 0xFFB14FE8.toInt()
+
+    /** The accent the user picked (Themes or Settings > Colors), falling back to [ACCENT]. */
+    @JvmStatic
+    fun accent(context: Context): Int = runCatching {
+        val prefs = app.lawnchair.preferences2.PreferenceManager2.getInstance(context)
+        val option = prefs.accentColor.firstCached(prefs)
+        if (option is app.lawnchair.theme.color.ColorOption.Default) {
+            ACCENT
+        } else {
+            option.colorPreferenceEntry.lightColor(context).takeIf { Color.alpha(it) != 0 } ?: ACCENT
+        }
+    }.getOrDefault(ACCENT)
 
     /** Text and glyphs on glass. */
     const val ON_GLASS = 0xFFFFFFFF.toInt()

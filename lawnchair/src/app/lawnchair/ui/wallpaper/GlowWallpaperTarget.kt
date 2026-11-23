@@ -19,7 +19,10 @@ package app.lawnchair.ui.wallpaper
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.WallpaperManager
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -40,10 +43,29 @@ internal object GlowWallpaperTarget {
             WallpaperManager.FLAG_LOCK,
             WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
         )
-        AlertDialog.Builder(activity)
+        AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(R.string.glow_wallpaper_apply)
             .setItems(labels) { _, which -> onPick(flags[which]) }
             .show()
+    }
+
+    /** Page text on the dark Glow background. */
+    const val TEXT = 0xFFF6F0FF.toInt()
+
+    /**
+     * The same dark violet night as Glow settings: dark bars with light icons and a
+     * soft pink-violet-blue glow behind the content.
+     */
+    @Suppress("DEPRECATION")
+    fun stylePage(activity: Activity, root: View) {
+        val base = 0xFF120B1E.toInt()
+        activity.window.statusBarColor = base
+        activity.window.navigationBarColor = base
+        activity.window.decorView.systemUiVisibility = 0
+        root.background = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.rgb(0x2A, 0x10, 0x3A), base, Color.rgb(0x14, 0x12, 0x34)),
+        )
     }
 
     /** A small non-cancelable "Applying…" dialog shown while the wallpaper is written. */
@@ -57,11 +79,12 @@ internal object GlowWallpaperTarget {
             addView(ProgressBar(activity))
             addView(TextView(activity).apply {
                 setText(R.string.glow_wallpaper_applying)
+                setTextColor(TEXT)
                 textSize = 16f
                 setPadding(pad, 0, 0, 0)
             })
         }
-        return AlertDialog.Builder(activity)
+        return AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setView(content)
             .setCancelable(false)
             .show()

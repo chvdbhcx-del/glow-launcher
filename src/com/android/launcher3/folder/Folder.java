@@ -1426,6 +1426,14 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         mActivityContext.updateOpenFolderPosition(inOutPosition, sTempRect, width, height);
         left = inOutPosition[0];
         top = inOutPosition[1];
+        // Glow: like iOS, the folder opens as a panel in the middle of the screen
+        // (it still grows out of its icon: the pivot below follows the icon)
+        if (mActivityContext instanceof Launcher) {
+            left = Utilities.boundToRange(sTempRect.centerX() - width / 2,
+                    sTempRect.left, Math.max(sTempRect.left, sTempRect.right - width));
+            top = Utilities.boundToRange(sTempRect.centerY() - height / 2,
+                    sTempRect.top, Math.max(sTempRect.top, sTempRect.bottom - height));
+        }
 
         int folderPivotX = width / 2 + (centeredLeft - left);
         int folderPivotY = height / 2 + (centeredTop - top);

@@ -51,6 +51,10 @@ import java.util.concurrent.Executors
  */
 class GlowThemesActivity : Activity() {
 
+    /** The theme accent (Themes / Settings), not a fixed violet. */
+    private val ACCENT by lazy { GlowGlass.accent(this) }
+
+
     private data class GlowTheme(
         @StringRes val name: Int,
         @DrawableRes val wallpaper: Int,
@@ -61,11 +65,6 @@ class GlowThemesActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.WHITE
-        window.navigationBarColor = Color.WHITE
-        // Dark status and navigation bar icons on the white page
-        window.decorView.systemUiVisibility =
-            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -87,12 +86,12 @@ class GlowThemesActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.WHITE)
             fitsSystemWindows = true
         }
+        GlowWallpaperTarget.stylePage(this, root)
         root.addView(TextView(this).apply {
             setText(R.string.glow_wallpaper_and_themes)
-            setTextColor(Color.BLACK)
+            setTextColor(GlowWallpaperTarget.TEXT)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(20), dp(20), dp(20), dp(12))
@@ -167,7 +166,7 @@ class GlowThemesActivity : Activity() {
         }
         row.addView(TextView(this).apply {
             setText(theme.name)
-            setTextColor(Color.BLACK)
+            setTextColor(GlowWallpaperTarget.TEXT)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             typeface = Typeface.DEFAULT_BOLD
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
@@ -242,7 +241,6 @@ class GlowThemesActivity : Activity() {
     ).toInt()
 
     companion object {
-        private val ACCENT = GlowGlass.ACCENT
 
         private val THEMES = listOf(
             GlowTheme(R.string.glow_theme_violet, R.drawable.glow_wallpaper_violet, Color.rgb(0xB1, 0x4F, 0xE8)),

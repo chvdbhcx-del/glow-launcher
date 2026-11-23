@@ -49,8 +49,12 @@ fun LawnchairTheme(
     darkTheme: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    // Glow: one fixed dark violet palette everywhere, see GlowSettingsTheme.kt
-    val colorScheme = glowColorScheme()
+    // Glow: one dark palette everywhere (see GlowSettingsTheme.kt), tinted with the theme accent
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val accent = androidx.compose.runtime.remember(context) {
+        androidx.compose.ui.graphics.Color(app.lawnchair.views.GlowGlass.accent(context))
+    }
+    val colorScheme = glowColorScheme(accent)
     MaterialExpressiveTheme(
         colorScheme = colorScheme,
         typography = Typography,

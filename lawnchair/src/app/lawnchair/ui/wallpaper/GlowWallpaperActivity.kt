@@ -46,25 +46,24 @@ import java.util.concurrent.Executors
  */
 class GlowWallpaperActivity : Activity() {
 
+    /** The theme accent (Themes / Settings), not a fixed violet. */
+    private val ACCENT by lazy { GlowGlass.accent(this) }
+
+
     private val executor = Executors.newSingleThreadExecutor()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.WHITE
-        window.navigationBarColor = Color.WHITE
-        // Dark status and navigation bar icons on the white page
-        window.decorView.systemUiVisibility =
-            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.WHITE)
             fitsSystemWindows = true
         }
+        GlowWallpaperTarget.stylePage(this, root)
 
         root.addView(TextView(this).apply {
             setText(R.string.wallpapers)
-            setTextColor(Color.BLACK)
+            setTextColor(GlowWallpaperTarget.TEXT)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(20), dp(20), dp(20), dp(12))
@@ -166,7 +165,6 @@ class GlowWallpaperActivity : Activity() {
     ).toInt()
 
     companion object {
-        private val ACCENT = GlowGlass.ACCENT
 
         private val WALLPAPERS = listOf(
             R.drawable.glow_wallpaper_violet,

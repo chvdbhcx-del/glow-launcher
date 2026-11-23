@@ -34,7 +34,6 @@ import app.lawnchair.preferences2.preferenceManager2
 import app.lawnchair.theme.color.ColorMode
 import app.lawnchair.ui.preferences.LocalIsExpandedScreen
 import app.lawnchair.ui.preferences.components.FeedPreference
-import app.lawnchair.ui.preferences.components.GestureHandlerPreference
 import app.lawnchair.ui.preferences.components.HomeLayoutSettings
 import app.lawnchair.ui.preferences.components.NavigationActionPreference
 import app.lawnchair.ui.preferences.components.OverlayHandlerPreference
@@ -91,11 +90,6 @@ fun HomeScreenPreferences(
                     enabled = lockHomeScreenAdapter.state.value.not(),
                 )
             }
-            SwitchPreference(
-                prefs.infiniteScrolling.getAdapter(),
-                label = stringResource(id = R.string.infinite_scrolling_label),
-                description = stringResource(id = R.string.infinite_scrolling_description),
-            )
         }
         PreferenceGroup(heading = stringResource(id = R.string.home_screen_actions)) {
             ClickablePreference(
