@@ -15,7 +15,6 @@
  */
 
 package app.lawnchair.ui.wallpaper
-package app.lawnchair.ui.wallpaper
 
 import android.app.Activity
 import android.app.AlertDialog
