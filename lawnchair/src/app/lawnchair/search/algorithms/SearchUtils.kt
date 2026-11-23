@@ -19,7 +19,13 @@ object SearchUtils {
         val queryTextLower = query.lowercase(Locale.getDefault())
         val matcher = StringMatcherUtility.StringMatcher.getInstance()
         return apps.asSequence()
-            .filter { StringMatcherUtility.matches(queryTextLower, it.title.toString(), matcher) }
+            .filter {
+                GlowSearchVariants.matches(
+                    GlowSearchVariants.variants(queryTextLower),
+                    it.title.toString(),
+                    it.targetPackage,
+                ) { q, title -> StringMatcherUtility.matches(q, title, matcher) }
+            }
             .filterHiddenApps(queryTextLower, hiddenApps, hiddenAppsInSearch)
             .take(maxResultsCount)
             .toList()

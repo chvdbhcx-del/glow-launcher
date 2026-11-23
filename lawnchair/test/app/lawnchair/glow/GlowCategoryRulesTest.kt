@@ -31,6 +31,31 @@ class GlowCategoryRulesTest {
     }
 
     @Test
+    fun knownAppsGoWherePeopleLook() {
+        assertEquals(GlowCategoryRules.UTILITIES, GlowCategoryRules.knownCategory("com.android.settings"))
+        assertEquals(GlowCategoryRules.ENTERTAINMENT, GlowCategoryRules.knownCategory("com.google.android.youtube"))
+        assertEquals(GlowCategoryRules.PRODUCTIVITY, GlowCategoryRules.knownCategory("com.google.android.calendar"))
+        assertNull(GlowCategoryRules.knownCategory("org.telegram.messenger"))
+    }
+
+    @Test
+    fun sectionLettersAreNormalized() {
+        assertEquals("Е", GlowCategoryRules.sectionOf("Ёлка"))
+        assertEquals("E", GlowCategoryRules.sectionOf("Éclair"))
+    }
+
+    @Test
+    fun indexIsCondensedWhenTooLong() {
+        val letters = ('A'..'Z').map { it.toString() } + ('А'..'Я').map { it.toString() }
+        val condensed = GlowCategoryRules.condensedIndex(letters, 20)
+        assert(condensed.size <= 30) { "got ${condensed.size}" }
+        assertEquals("A", condensed.first().first)
+        assertEquals("Я", condensed.last().second)
+        val short = listOf("A", "B", "C")
+        assertEquals(short.map { it to it }, GlowCategoryRules.condensedIndex(short, 20))
+    }
+
+    @Test
     fun tabletsGetMoreColumns() {
         assertEquals(2, GlowCategoryRules.tileColumns(390f))
         assertEquals(3, GlowCategoryRules.tileColumns(600f))

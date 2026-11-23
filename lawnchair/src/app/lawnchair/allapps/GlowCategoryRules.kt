@@ -83,6 +83,48 @@ object GlowCategoryRules {
         GAMES to setOf("game", "games", "gaming"),
     )
 
+    /** Common apps whose own category or keywords put them in the wrong group. */
+    private val KNOWN_PACKAGES: Map<String, String> = mapOf(
+        "com.android.settings" to UTILITIES,
+        "com.google.android.deskclock" to UTILITIES,
+        "com.android.deskclock" to UTILITIES,
+        "com.google.android.calculator" to UTILITIES,
+        "com.android.calculator2" to UTILITIES,
+        "com.google.android.apps.nbu.files" to UTILITIES,
+        "com.google.android.documentsui" to UTILITIES,
+        "com.android.documentsui" to UTILITIES,
+        "com.android.chrome" to UTILITIES,
+        "org.mozilla.firefox" to UTILITIES,
+        "com.google.android.googlequicksearchbox" to UTILITIES,
+        "com.android.vending" to UTILITIES,
+        "com.google.android.calendar" to PRODUCTIVITY,
+        "com.google.android.gm" to PRODUCTIVITY,
+        "com.google.android.keep" to PRODUCTIVITY,
+        "com.google.android.apps.docs" to PRODUCTIVITY,
+        "com.google.android.contacts" to SOCIAL,
+        "com.android.contacts" to SOCIAL,
+        "com.google.android.dialer" to SOCIAL,
+        "com.android.dialer" to SOCIAL,
+        "com.google.android.apps.messaging" to SOCIAL,
+        "com.google.android.youtube" to ENTERTAINMENT,
+        "com.google.android.apps.youtube.music" to ENTERTAINMENT,
+        "com.google.android.apps.photos" to CREATIVITY,
+        "com.google.android.GoogleCamera" to CREATIVITY,
+        "com.google.android.apps.maps" to TRAVEL,
+    )
+
+    /**
+     * Fixed order of the library tiles, so categories don't jump around when an app is
+     * installed (after "Recently added"); groups not listed keep their size order after these.
+     */
+    val TILE_ORDER: List<String> = listOf(
+        SOCIAL, UTILITIES, PRODUCTIVITY, ENTERTAINMENT, CREATIVITY, FINANCE, SHOPPING,
+        TRAVEL, READING, HEALTH, EDUCATION, GAMES,
+    )
+
+    /** Group for a well-known package, or null. */
+    fun knownCategory(pkg: String): String? = KNOWN_PACKAGES[pkg]
+
     /** Splits a package and a label into lower-case tokens. */
     fun tokens(pkg: String, title: String?): Set<String> {
         val out = HashSet<String>()
@@ -102,7 +144,30 @@ object GlowCategoryRules {
     /** First letter for the A–Z index ("#" for digits, symbols and empty labels). */
     fun sectionOf(title: String?): String {
         val c = title?.trim()?.firstOrNull() ?: return "#"
-        return if (c.isLetter()) c.uppercaseChar().toString() else "#"
+        if (!c.isLetter()) return "#"
+        // "Ё" files under "Е", accented letters under their base letter ("É" -> "E")
+        val upper = c.uppercaseChar()
+        if (upper == 'Ё') return "Е"
+        val base = java.text.Normalizer.normalize(upper.toString(), java.text.Normalizer.Form.NFD)
+            .firstOrNull { it.isLetter() } ?: upper
+        return base.toString()
+    }
+
+    /**
+     * Index strip labels that fit [maxLetters] slots: every other letter is replaced by
+     * a dot when there are too many, like iOS. Returns (label, section) pairs; a dot
+     * jumps to the letter it stands for.
+     */
+    fun condensedIndex(letters: List<String>, maxLetters: Int): List<Pair<String, String>> {
+        if (letters.size <= maxLetters || maxLetters < 3) return letters.map { it to it }
+        val step = (letters.size + maxLetters - 1) / maxLetters
+        return letters.mapIndexedNotNull { i, l ->
+            when {
+                i == letters.lastIndex || i % (step * 2) == 0 -> l to l
+                i % step == 0 -> "•" to l
+                else -> null
+            }
+        }
     }
 
     /** Columns for the App Library tiles at a given width (2 on phones, more on tablets). */

@@ -390,6 +390,8 @@ public class ItemClickHandler {
     private static void startAppShortcutOrInfoActivity(View v, ItemInfo item, Launcher launcher) {
         TestLogging.recordEvent(
                 TestProtocol.SEQUENCE_MAIN, "start: startAppShortcutOrInfoActivity");
+        // Glow: the App Library puts the most used apps of a category first
+        app.lawnchair.allapps.GlowLaunchStats.record(launcher, item);
         Intent intent = item.getIntent();
         if (item instanceof ItemInfoWithIcon itemInfoWithIcon) {
             if ((itemInfoWithIcon.runtimeStatusFlags

@@ -19,6 +19,9 @@
     <string name="accessibility_smartspace_page">Страница %1$d из %2$d</string>
     <!-- Glow -->
     <string name="glow_themes">Темы</string>
+    <string name="glow_hint_library">Смахните влево с последней страницы, чтобы открыть библиотеку приложений</string>
+    <string name="glow_hint_edit">Удерживайте палец на экране, чтобы изменить его</string>
+    <string name="glow_open_library">Открыть библиотеку приложений</string>
     <string name="glow_dock_glass_frost">Матовость стекла</string>
     <string name="glow_about_release_notes">Что нового</string>
     <string name="glow_about_source">Исходный код</string>

@@ -414,6 +414,28 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         }
     }
 
+    // Glow: TalkBack and Switch Access users can't do the edge swipe, so the App Library
+    // is also an accessibility action of the home screen
+    @Override
+    public void onInitializeAccessibilityNodeInfo(android.view.accessibility.AccessibilityNodeInfo info) {
+        super.onInitializeAccessibilityNodeInfo(info);
+        if (app.lawnchair.allapps.GlowSideLibrary.isEnabled(mLauncher)) {
+            info.addAction(new android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction(
+                    R.id.glow_action_open_library,
+                    getContext().getString(R.string.glow_open_library)));
+        }
+    }
+
+    @Override
+    public boolean performAccessibilityAction(int action, android.os.Bundle arguments) {
+        if (action == R.id.glow_action_open_library
+                && app.lawnchair.allapps.GlowSideLibrary.isEnabled(mLauncher)) {
+            mLauncher.getStateManager().goToState(LauncherState.ALL_APPS);
+            return true;
+        }
+        return super.performAccessibilityAction(action, arguments);
+    }
+
     private void setPageIndicatorInset() {
         DeviceProfile grid = mLauncher.getDeviceProfile();
 

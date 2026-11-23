@@ -283,7 +283,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
             clipChildren = false
             clipToPadding = false
         }
-        val apps = category.apps
+        // Big icons are the apps used most; "Recently added" keeps its newest-first order
+        val apps = if (category.key == "recent") category.apps else GlowLaunchStats.ranked(context, category.apps)
         val bigCount = if (apps.size <= 4) apps.size else 3
         for (i in 0 until bigCount) {
             addBigIcon(square, apps[i], geo, i)
@@ -558,7 +559,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
         overlay.addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
         // Index strip: tap or slide over a letter to jump to its section (TalkBack users scroll the list)
-        val letters = sections.keys.toList()
+        // One slot is about 15dp; with Latin and Cyrillic names there can be ~60 letters,
+        // so the strip is condensed with dots when they don't fit (like iOS)
+        val stripHeight = height - dp(GlowGlass.MIN_TOUCH_DP + 4) - bottomInset - dp(24)
+        val entries = GlowCategoryRules.condensedIndex(sections.keys.toList(), (stripHeight / dp(15)).coerceAtLeast(3))
+        val letters = entries.map { it.second }
         val bubble = TextView(context).apply {
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f)
@@ -572,11 +577,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-            letters.forEach { l ->
+            entries.forEach { (label, _) ->
                 addView(TextView(context).apply {
-                    text = l
+                    text = label
                     setTextColor(Color.argb(230, 255, 255, 255))
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                     typeface = Typeface.DEFAULT_BOLD
                     gravity = Gravity.CENTER
                     includeFontPadding = false
@@ -620,7 +625,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 true
             }
         }
-        overlay.addView(index, LayoutParams(dp(INDEX_WIDTH_DP), LayoutParams.MATCH_PARENT, Gravity.END).apply {
+        // 44dp wide touch strip; the letters stay a narrow column at the edge
+        overlay.addView(index, LayoutParams(dp(INDEX_TOUCH_WIDTH_DP), LayoutParams.MATCH_PARENT, Gravity.END).apply {
             topMargin = dp(GlowGlass.MIN_TOUCH_DP + 4)
             bottomMargin = bottomInset + dp(24)
         })
@@ -877,6 +883,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
         private const val MINI_GAP_RATIO = 0.12f
         private const val PILL_HEIGHT_DP = 32
         private const val INDEX_WIDTH_DP = 30
+        private const val INDEX_TOUCH_WIDTH_DP = 44
         private const val RECENT_COUNT = 8
         private const val RECENT_WINDOW_MS = 14L * 24 * 60 * 60 * 1000
         private const val REBUILD_DELAY_MS = 300L
@@ -954,7 +961,9 @@ class GlowAppLibraryView @JvmOverloads constructor(
             val groups = linkedMapOf<String, MutableList<AppInfo>>()
             val assigned = HashSet<String>()
 
-            // 1. Flowerpot rules (curated package/intent lists), only for packages not cached yet
+            // Flowerpot matches (package lists and broad intent rules, e.g. "anything with
+            // search is a tool"): only a hint below the app's own category and keywords
+            val potGroups = HashMap<String, String>()
             val uncached = apps.filter { it.targetPackage != null && !groupCache.containsKey(it.targetPackage) }
             if (uncached.isNotEmpty()) {
                 for (pot in pots) {
@@ -962,20 +971,23 @@ class GlowAppLibraryView @JvmOverloads constructor(
                     val matched = runCatching { pot.categorizeApps(uncached).values.flatten() }.getOrDefault(emptyList())
                     for (app in matched) {
                         val pkg = app.targetPackage ?: continue
-                        groupCache.putIfAbsent(pkg, group)
+                        potGroups.putIfAbsent(pkg, group)
                     }
                 }
             }
 
-            // 2. Android's own app category, 3. package/label keywords, 4. system apps -> utilities
+            // 1. well-known apps, 2. Android's own app category, 3. package/label keywords,
+            // 4. Flowerpot, 5. system apps -> utilities
             for (app in apps) {
                 val key = app.toComponentKey().toString()
                 if (!assigned.add(key)) continue
                 val pkg = app.targetPackage ?: continue
                 val group = groupCache.getOrPut(pkg) {
                     val info = runCatching { pm.getApplicationInfo(pkg, 0) }.getOrNull()
-                    info?.let { androidCategory(it) }
+                    GlowCategoryRules.knownCategory(pkg)
+                        ?: info?.let { androidCategory(it) }
                         ?: GlowCategoryRules.keywordCategory(pkg, app.title?.toString())
+                        ?: potGroups[pkg]
                         ?: if (info != null && info.flags and ApplicationInfo.FLAG_SYSTEM != 0) {
                             GlowCategoryRules.UTILITIES
                         } else {
@@ -993,7 +1005,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
             }
             groups.filterKeys { it != GlowCategoryRules.OTHER }
                 .entries
-                .sortedByDescending { it.value.size }
+                .sortedWith(
+                    compareBy<Map.Entry<String, MutableList<AppInfo>>> {
+                        GlowCategoryRules.TILE_ORDER.indexOf(it.key).let { i -> if (i < 0) Int.MAX_VALUE else i }
+                    }.thenByDescending { it.value.size },
+                )
                 .forEach { (group, list) ->
                     val label = GROUP_LABELS[group] ?: R.string.glow_library_other
                     result += Category(group, context.getString(label), list.sortedWith(byTitle))

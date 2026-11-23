@@ -472,6 +472,7 @@ class LawnchairLauncher : QuickstepLauncher() {
         super.onResume()
         restartIfPending()
         app.lawnchair.update.GlowUpdater.maybeAutoCheck(this)
+        app.lawnchair.views.GlowHints.maybeShow(this)
         refreshPredictionContainersFromModel()
 
         dragLayer.viewTreeObserver.addOnDrawListener(
