@@ -1213,4 +1213,8 @@
     <string name="glow_close">Close</string>
     <string name="glow_grid_changed">Grid changed to %1$d × %2$d</string>
     <string name="glow_app_lock_inactive">App lock is off: there is no screen lock on this device</string>
+    <string name="glow_library_move">Move to folder</string>
+    <string name="glow_library_move_title">Move “%1$s” to</string>
+    <string name="glow_library_move_auto">Automatic</string>
+    <string name="glow_library_moved">%1$s → %2$s</string>
 </resources>

@@ -152,6 +152,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
     init {
         addView(tiles, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         setBottomInset(0)
+        liveViews.add(this)
     }
 
     fun setBottomInset(bottom: Int) {
@@ -894,6 +895,40 @@ class GlowAppLibraryView @JvmOverloads constructor(
         /** package -> first install time. */
         private val installCache = ConcurrentHashMap<String, Long>()
 
+        private const val OVERRIDES_PREFS = "glow_library_categories"
+
+        /** Library views alive right now, rebuilt when the user moves an app. */
+        private val liveViews: MutableSet<GlowAppLibraryView> =
+            java.util.Collections.newSetFromMap(java.util.WeakHashMap())
+
+        private fun overrides(context: Context) =
+            context.applicationContext.getSharedPreferences(OVERRIDES_PREFS, Context.MODE_PRIVATE)
+
+        /** The folder the user picked for [pkg], or null when it is sorted automatically. */
+        @JvmStatic
+        fun userCategory(context: Context, pkg: String): String? =
+            overrides(context).getString(pkg, null)?.takeIf { it in GROUP_LABELS }
+
+        /**
+         * Puts [pkg] in [group] for good, or back to automatic sorting when [group] is null,
+         * and redraws the library.
+         */
+        @JvmStatic
+        fun moveApp(context: Context, pkg: String, group: String?) {
+            overrides(context).edit().apply {
+                if (group == null) remove(pkg) else putString(pkg, group)
+            }.apply()
+            groupCache.remove(pkg)
+            MAIN_EXECUTOR.execute { liveViews.toList().forEach { it.rebuild() } }
+        }
+
+        /** Folders an app can be moved to, as (key, label) in tile order. */
+        @JvmStatic
+        fun movableCategories(context: Context): List<Pair<String, String>> =
+            GlowCategoryRules.MOVABLE_GROUPS.mapNotNull { key ->
+                GROUP_LABELS[key]?.let { key to context.getString(it) }
+            }
+
         /** Forgets what is cached about a package (call when it is installed again or updated). */
         @JvmStatic
         fun invalidatePackage(pkg: String) {
@@ -958,6 +993,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
 
         private fun categorize(context: Context, apps: List<AppInfo>, pots: List<Flowerpot>): List<Category> {
             val pm = context.packageManager
+            val picked = runCatching { overrides(context).all }.getOrDefault(emptyMap())
             val groups = linkedMapOf<String, MutableList<AppInfo>>()
             val assigned = HashSet<String>()
 
@@ -982,7 +1018,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 val key = app.toComponentKey().toString()
                 if (!assigned.add(key)) continue
                 val pkg = app.targetPackage ?: continue
-                val group = groupCache.getOrPut(pkg) {
+                val group = (picked[pkg] as? String)?.takeIf { it in GROUP_LABELS } ?: groupCache.getOrPut(pkg) {
                     val info = runCatching { pm.getApplicationInfo(pkg, 0) }.getOrNull()
                     GlowCategoryRules.knownCategory(pkg)
                         ?: info?.let { androidCategory(it) }

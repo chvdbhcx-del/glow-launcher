@@ -136,4 +136,8 @@
     <string name="glow_close">Закрыть</string>
     <string name="glow_grid_changed">Сетка изменена на %1$d × %2$d</string>
     <string name="glow_app_lock_inactive">Блокировка не работает: на устройстве нет блокировки экрана</string>
+    <string name="glow_library_move">Переместить в папку</string>
+    <string name="glow_library_move_title">Куда переместить «%1$s»</string>
+    <string name="glow_library_move_auto">Автоматически</string>
+    <string name="glow_library_moved">%1$s → %2$s</string>
 </resources>

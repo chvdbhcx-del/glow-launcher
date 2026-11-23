@@ -35,7 +35,27 @@ class GlowCategoryRulesTest {
         assertEquals(GlowCategoryRules.UTILITIES, GlowCategoryRules.knownCategory("com.android.settings"))
         assertEquals(GlowCategoryRules.ENTERTAINMENT, GlowCategoryRules.knownCategory("com.google.android.youtube"))
         assertEquals(GlowCategoryRules.PRODUCTIVITY, GlowCategoryRules.knownCategory("com.google.android.calendar"))
-        assertNull(GlowCategoryRules.knownCategory("org.telegram.messenger"))
+        assertEquals(GlowCategoryRules.SOCIAL, GlowCategoryRules.knownCategory("org.telegram.messenger"))
+        assertEquals(GlowCategoryRules.FINANCE, GlowCategoryRules.knownCategory("com.ftband.mono"))
+        assertEquals(GlowCategoryRules.SHOPPING, GlowCategoryRules.knownCategory("com.glovo"))
+        assertNull(GlowCategoryRules.knownCategory("com.example.unknown"))
+    }
+
+    @Test
+    fun appsThatUsedToLandInOther() {
+        fun group(pkg: String, label: String) = GlowCategoryRules.keywordCategory(pkg, label)
+        assertEquals(GlowCategoryRules.TRAVEL, group("com.example.easyway", "EasyWay"))
+        assertEquals(GlowCategoryRules.TRAVEL, group("com.example.cars", "Getmancar"))
+        assertEquals(GlowCategoryRules.TRAVEL, group("com.example.rent", "GO2GO rent"))
+        assertEquals(GlowCategoryRules.SHOPPING, group("com.example.app", "Gremio Grill"))
+        assertEquals(GlowCategoryRules.SHOPPING, group("com.example.app", "Osama sushi"))
+        assertEquals(GlowCategoryRules.SHOPPING, group("ua.slando", "OLX.ua"))
+        assertEquals(GlowCategoryRules.SHOPPING, group("com.example.app", "Bolt Food"))
+        assertEquals(GlowCategoryRules.TRAVEL, group("com.example.app", "Bolt"))
+        // stems inside longer words: Telegram clients and keyboards
+        assertEquals(GlowCategoryRules.SOCIAL, group("com.example.app", "Hivogram"))
+        assertEquals(GlowCategoryRules.UTILITIES, group("com.example.app", "PixelBoard"))
+        assertNull(group("com.example.app", "Diagram"))
     }
 
     @Test
