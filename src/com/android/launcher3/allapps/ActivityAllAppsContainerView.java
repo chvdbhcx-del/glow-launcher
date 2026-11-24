@@ -1351,6 +1351,17 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         updateSearchResultsVisibility();
     }
 
+    /** Glow: Back first closes an open category or the A-Z list of the App Library. */
+    public boolean glowCanHandleBack() {
+        return isGlowLibraryShown() && mGlowLibrary.hasOpenOverlay();
+    }
+
+    public void glowHandleBack() {
+        if (mGlowLibrary != null) {
+            mGlowLibrary.closeCategory(true);
+        }
+    }
+
     private boolean isGlowLibraryShown() {
         return mGlowLibrary != null && mGlowLibraryVisible && !isSearching();
     }
@@ -1791,7 +1802,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         float bottomSheetBackgroundAlpha = Color.alpha(bottomSheetBackgroundColor) / 255.0f;
         if (hasBottomSheet) {
             mHeaderPaint.setColor(bottomSheetBackgroundColor);
-            mHeaderPaint.setAlpha((int) (bottomSheetBackgroundAlpha * 255));
+            // Glow: the panel fades with the container (Spotlight-style search)
+            mHeaderPaint.setAlpha((int) (bottomSheetBackgroundAlpha * 255 * getAlpha()));
 
             mTmpRectF.set(
                     leftWithScale,

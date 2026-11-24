@@ -16,8 +16,8 @@
 
 package app.lawnchair.update
 
-import android.app.AlertDialog
 import android.content.Context
+import android.content.res.ColorStateList
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
@@ -29,6 +29,7 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
+import app.lawnchair.views.GlowSheet
 import com.android.launcher3.BuildConfig
 import com.android.launcher3.Launcher
 import com.android.launcher3.R
@@ -58,6 +59,8 @@ object GlowUpdater {
     private const val RELEASES_URL =
         "https://api.github.com/repos/chvdbhcx-del/glow-launcher/releases?per_page=20"
     private const val AUTO_CHECK_INTERVAL_MS = 6L * 60 * 60 * 1000
+    /** No automatic update prompt during the first day after Glow is installed. */
+    private const val FIRST_RUN_QUIET_MS = 24L * 60 * 60 * 1000
     private const val MAX_API_BYTES = 2L * 1024 * 1024
     private const val MAX_APK_BYTES = 200L * 1024 * 1024
     private const val PREFS = "glow_updater"
@@ -67,6 +70,20 @@ object GlowUpdater {
 
     @Volatile private var busy = false
     @Volatile private var cancelled = false
+
+    /** An automatic offer that arrived while the user was busy (drawer, folder, menu open). */
+    private var pendingOffer: GlowUpdateLogic.Release? = null
+
+    /** A release the user chose to install before allowing installs from Glow. */
+    private var pendingInstall: GlowUpdateLogic.Release? = null
+
+    /** True when a dialog would not interrupt anything: plain home screen, nothing open. */
+    private fun isIdle(launcher: Launcher): Boolean =
+        launcher.isInState(com.android.launcher3.LauncherState.NORMAL) &&
+            com.android.launcher3.AbstractFloatingView.getTopOpenView(launcher) == null &&
+            !launcher.dragController.isDragging &&
+            !GlowSheet.isAnyShowing() &&
+            app.lawnchair.views.GlowHints.isWelcomeDone(launcher)
 
     private val ownTag: String get() = BuildConfig.GLOW_RELEASE_TAG
 
@@ -78,9 +95,58 @@ object GlowUpdater {
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+    /** Set by the settings screen: run a manual check when the home screen comes back. */
+    @Volatile private var manualCheckRequested = false
+
+    /** Whether Glow looks for updates on its own (every few hours). */
+    @JvmStatic
+    fun isAutoCheckEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_AUTO, true)
+
+    @JvmStatic
+    fun setAutoCheckEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_AUTO, enabled).apply()
+    }
+
+    /** From settings: go home and check for updates there (the dialogs need the launcher). */
+    @JvmStatic
+    fun checkFromSettings(context: Context) {
+        manualCheckRequested = true
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                    .setPackage(context.packageName)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+
     @JvmStatic
     fun maybeAutoCheck(launcher: Launcher) {
+        if (manualCheckRequested) {
+            manualCheckRequested = false
+            checkNow(launcher)
+            return
+        }
         if (!isSupported() || busy) return
+        // Back from the "Install unknown apps" settings with permission: continue the update
+        pendingInstall?.let { release ->
+            if (canInstall(launcher)) {
+                pendingInstall = null
+                download(launcher, release)
+                return
+            }
+        }
+        pendingOffer?.let { release ->
+            if (isIdle(launcher)) {
+                pendingOffer = null
+                offer(launcher, release, manual = false)
+            }
+            return
+        }
+        val installedAt = runCatching {
+            launcher.packageManager.getPackageInfo(launcher.packageName, 0).firstInstallTime
+        }.getOrDefault(0L)
+        if (System.currentTimeMillis() - installedAt < FIRST_RUN_QUIET_MS) return
         val prefs = prefs(launcher)
         if (!prefs.getBoolean(KEY_AUTO, true)) return
         val now = System.currentTimeMillis()
@@ -114,7 +180,7 @@ object GlowUpdater {
                 result.onFailure {
                     Log.w(TAG, "Update check failed", it)
                     if (manual) {
-                        Toast.makeText(launcher, R.string.glow_update_failed, Toast.LENGTH_LONG).show()
+                        Toast.makeText(launcher, R.string.glow_update_check_failed, Toast.LENGTH_LONG).show()
                     }
                 }
                 result.onSuccess { release ->
@@ -125,6 +191,11 @@ object GlowUpdater {
                         return@onSuccess
                     }
                     if (!manual && prefs(launcher).getString(KEY_DISMISSED, null) == release.tag) {
+                        return@onSuccess
+                    }
+                    if (!manual && !isIdle(launcher)) {
+                        // Shown on the next return to a quiet home screen instead
+                        pendingOffer = release
                         return@onSuccess
                     }
                     offer(launcher, release, manual)
@@ -204,28 +275,34 @@ object GlowUpdater {
 
     private fun offer(launcher: Launcher, release: GlowUpdateLogic.Release, manual: Boolean) {
         val name = release.tag.removePrefix("v")
-        val builder = AlertDialog.Builder(launcher, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(launcher.getString(R.string.glow_update_available, name))
-            .setMessage(R.string.glow_update_message)
-            .setPositiveButton(R.string.glow_update_install) { _, _ -> download(launcher, release) }
-            .setNegativeButton(R.string.glow_update_later) { _, _ ->
-                prefs(launcher).edit().putString(KEY_DISMISSED, release.tag).apply()
-            }
+        val sheet = GlowSheet(launcher)
+            .title(launcher.getString(R.string.glow_update_available, name), launcher.getString(R.string.glow_update_message))
+        sheet.choice(launcher.getString(R.string.glow_update_install), primary = true) {
+            sheet.dismiss()
+            download(launcher, release)
+        }
+        sheet.choice(launcher.getString(R.string.glow_update_later)) {
+            sheet.dismiss()
+            prefs(launcher).edit().putString(KEY_DISMISSED, release.tag).apply()
+        }
         if (!manual) {
-            builder.setNeutralButton(R.string.glow_update_never_auto) { _, _ ->
+            sheet.choice(launcher.getString(R.string.glow_update_never_auto)) {
+                sheet.dismiss()
                 prefs(launcher).edit().putBoolean(KEY_AUTO, false).apply()
                 Toast.makeText(launcher, R.string.glow_update_auto_off, Toast.LENGTH_LONG).show()
             }
         } else if (!prefs(launcher).getBoolean(KEY_AUTO, true)) {
-            builder.setNeutralButton(R.string.glow_update_auto_on) { _, _ ->
+            sheet.choice(launcher.getString(R.string.glow_update_auto_on)) {
+                sheet.dismiss()
                 prefs(launcher).edit().putBoolean(KEY_AUTO, true).apply()
             }
         }
-        builder.show()
+        sheet.show()
     }
 
     private fun download(launcher: Launcher, release: GlowUpdateLogic.Release) {
         if (!canInstall(launcher)) {
+            pendingInstall = release
             Toast.makeText(launcher, R.string.glow_update_allow_install, Toast.LENGTH_LONG).show()
             runCatching {
                 launcher.startActivity(
@@ -235,19 +312,20 @@ object GlowUpdater {
             }
             return
         }
+        val dialog = GlowSheet(launcher).title(launcher.getString(R.string.glow_update_downloading))
         val progress = ProgressBar(launcher, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
             isIndeterminate = true
-            val pad = (24 * resources.displayMetrics.density).toInt()
-            setPadding(pad, pad / 2, pad, pad / 2)
+            progressTintList = ColorStateList.valueOf(dialog.accentColor)
+            indeterminateTintList = ColorStateList.valueOf(dialog.accentColor)
         }
         cancelled = false
-        val dialog = AlertDialog.Builder(launcher, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(R.string.glow_update_downloading)
-            .setView(progress)
-            .setCancelable(false)
-            .setNegativeButton(R.string.glow_cancel) { _, _ -> cancelled = true }
-            .show()
+        dialog.view(progress)
+            .choice(launcher.getString(R.string.glow_cancel)) {
+                cancelled = true
+                dialog.dismiss()
+            }
+            .show(cancelable = false)
         val appContext = launcher.applicationContext
         THREAD_POOL_EXECUTOR.execute {
             val file = runCatching {

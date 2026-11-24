@@ -9,7 +9,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.lawnchair.preferences.PreferenceManager
 import app.lawnchair.preferences.getAdapter
-import app.lawnchair.preferences.not
 import app.lawnchair.preferences.preferenceManager
 import app.lawnchair.preferences2.PreferenceManager2
 import app.lawnchair.preferences2.preferenceManager2
@@ -19,7 +18,6 @@ import app.lawnchair.ui.preferences.LocalNavController
 import app.lawnchair.ui.preferences.components.HiddenAppsInSearchPreference
 import app.lawnchair.ui.preferences.components.controls.ListPreference
 import app.lawnchair.ui.preferences.components.controls.ListPreferenceEntry
-import app.lawnchair.ui.preferences.components.controls.MainSwitchPreference
 import app.lawnchair.ui.preferences.components.controls.SwitchPreference
 import app.lawnchair.ui.preferences.components.controls.TwoTargetSwitchPreference
 import app.lawnchair.ui.preferences.components.layout.PreferenceGroup
@@ -38,14 +36,11 @@ fun DrawerSearchPreference(
     val prefs2 = preferenceManager2()
     val context = LocalContext.current
 
-    val showDrawerSearchBar = !prefs2.hideAppDrawerSearchBar.getAdapter()
     val hiddenApps = prefs2.hiddenApps.getAdapter().state.value
 
-    MainSwitchPreference(
-        adapter = showDrawerSearchBar,
-        label = stringResource(id = R.string.show_app_search_bar),
-        modifier = modifier,
-    ) {
+    // Glow: the library search field is always shown (the Search pill opens it),
+    // so there is no switch to hide it
+    androidx.compose.foundation.layout.Column(modifier = modifier) {
         PreferenceGroup(heading = stringResource(R.string.general_label)) {
             if (hiddenApps.isNotEmpty()) {
                 HiddenAppsInSearchPreference()

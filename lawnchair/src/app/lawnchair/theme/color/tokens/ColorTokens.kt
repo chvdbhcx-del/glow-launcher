@@ -145,8 +145,8 @@ object ColorTokens {
 
     @JvmField val FolderPreviewColor = DayNightColorToken(Accent2_200, Neutral1_900.setLStar(12.0))
 
-    // Glow: app menus are translucent "glass"
-    private const val GLOW_POPUP_ALPHA = 0.84f
+    // Glow: app menus are frosted but must stay readable over busy icons (0.84 let icons show through)
+    private const val GLOW_POPUP_ALPHA = 0.96f
 
     @JvmField val PopupColorPrimary = DayNightColorToken(Accent2_50, Neutral2_800)
 

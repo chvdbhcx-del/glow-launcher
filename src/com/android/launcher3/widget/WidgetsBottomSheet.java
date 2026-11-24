@@ -78,6 +78,8 @@ public class WidgetsBottomSheet extends BaseWidgetSheet {
         fontManager.setCustomFont(mTitle, R.id.font_heading);
 
         mContent.setBackground(DrawableTokens.WidgetsBottomSheetBackground.resolve(getContext()));
+        app.lawnchair.views.GlowFrostedBackground.apply(mContent,
+                getResources().getDimension(R.dimen.dialogCornerRadius));
     }
 
     @Override

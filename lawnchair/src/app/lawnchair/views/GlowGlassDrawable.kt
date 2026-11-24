@@ -28,8 +28,11 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.view.View
 import android.view.ViewTreeObserver
+import android.view.WindowManager
+import java.util.function.Consumer
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -81,6 +84,19 @@ class GlowGlassDrawable @JvmOverloads constructor(
     private var blurRadiusPx = 0
     private var hostAlpha = 1f
 
+    /**
+     * The system has turned blur off while the glass is on screen (battery saver, thermal
+     * limits, the user's setting). The fill gets denser so text stays readable without it.
+     */
+    private var blurOff = false
+        set(value) {
+            if (field == value) return
+            field = value
+            shadersFor = Rect()
+            invalidateSelf()
+        }
+    private var blurListener: Consumer<Boolean>? = null
+
     override fun draw(canvas: Canvas) {
         val b = bounds
         if (b.isEmpty) return
@@ -110,11 +126,12 @@ class GlowGlassDrawable @JvmOverloads constructor(
             onLight -> level.darkAlpha
             else -> level.lightAlpha
         }
+        val alpha = if (blurOff) min(base * BLUR_OFF_BOOST, MAX_BLUR_OFF_ALPHA) else base.toFloat()
         val (fr, fg, fb) = if (onLight) Triple(22, 16, 32) else Triple(255, 255, 255)
         fill.shader = LinearGradient(
             0f, top, 0f, bottom,
-            Color.argb(clamp(base * 1.2f), fr, fg, fb),
-            Color.argb(clamp(base * 0.8f), fr, fg, fb),
+            Color.argb(clamp(alpha * 1.2f), fr, fg, fb),
+            Color.argb(clamp(alpha * 0.8f), fr, fg, fb),
             Shader.TileMode.CLAMP,
         )
         val sheenAlpha = if (onLight) 16 else 30
@@ -168,21 +185,54 @@ class GlowGlassDrawable @JvmOverloads constructor(
 
     private val attachListener = object : View.OnAttachStateChangeListener {
         override fun onViewAttachedToWindow(v: View) {
-            if (blur != null) return
-            blur = GlowBlur.create(v, blurRadiusPx, radius)?.also {
-                it.callback = this@GlowGlassDrawable
-                hostAlpha = effectiveAlpha(v)
-                it.alpha = (255 * hostAlpha * (drawAlpha / 255f)).roundToInt()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurListener == null) {
+                val listener = Consumer<Boolean> { enabled -> onBlurEnabledChanged(v, enabled) }
+                val added = runCatching {
+                    v.context.getSystemService(WindowManager::class.java)
+                        ?.addCrossWindowBlurEnabledListener(v.context.mainExecutor, listener)
+                }.isSuccess
+                if (added) blurListener = listener
             }
-            if (blur != null) v.viewTreeObserver.addOnPreDrawListener(preDraw)
-            invalidateSelf()
+            attachBlur(v)
         }
 
         override fun onViewDetachedFromWindow(v: View) {
-            v.viewTreeObserver.removeOnPreDrawListener(preDraw)
-            blur?.callback = null
-            blur = null
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                blurListener?.let { listener ->
+                    runCatching {
+                        v.context.getSystemService(WindowManager::class.java)
+                            ?.removeCrossWindowBlurEnabledListener(listener)
+                    }
+                }
+            }
+            blurListener = null
+            detachBlur(v)
         }
+    }
+
+    private fun onBlurEnabledChanged(v: View, enabled: Boolean) {
+        blurOff = !enabled
+        if (!v.isAttachedToWindow) return
+        if (enabled) attachBlur(v) else detachBlur(v)
+        v.invalidate()
+    }
+
+    private fun attachBlur(v: View) {
+        if (blur != null) return
+        blur = GlowBlur.create(v, blurRadiusPx, radius)?.also {
+            it.callback = this@GlowGlassDrawable
+            hostAlpha = effectiveAlpha(v)
+            it.alpha = (255 * hostAlpha * (drawAlpha / 255f)).roundToInt()
+        }
+        if (blur != null) v.viewTreeObserver.addOnPreDrawListener(preDraw)
+        invalidateSelf()
+    }
+
+    private fun detachBlur(v: View) {
+        v.viewTreeObserver.removeOnPreDrawListener(preDraw)
+        blur?.callback = null
+        blur = null
+        invalidateSelf()
     }
 
     /** Alpha of [view] as it appears on screen: its own times every parent's. */
@@ -228,4 +278,9 @@ class GlowGlassDrawable @JvmOverloads constructor(
         scheduleSelf(what, `when`)
 
     override fun unscheduleDrawable(who: Drawable, what: Runnable) = unscheduleSelf(what)
+
+    private companion object {
+        const val BLUR_OFF_BOOST = 1.7f
+        const val MAX_BLUR_OFF_ALPHA = 200f
+    }
 }

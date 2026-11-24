@@ -683,7 +683,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">Αναζήτηση εφαρμογών</string>
     <string name="search_provider_custom">Προσαρμοσμένο</string>
-    <string name="search_provider_sponsored_description">%1$s και ο εκκινητής Lawnchair έχουν συμφωνία μεριδίου εσόδων.\n\nΗ αναζήτηση μέσω του %1$s βοηθά στην υποστήριξη του Lawnchair.</string>
     <string name="app_label">Εφαρμογή</string>
     <string name="website_label">Ιστοσελίδα</string>
     <string name="qsb_search_provider_app_required">Απαιτείται η εφαρμογή</string>

@@ -34,7 +34,7 @@
     <string name="action_lock">Lock</string>
 
     <string name="action_apply">Apply</string>
-    <string name="action_customize">Customize</string>
+    <string name="action_customize">Edit icon and name</string>
 
     <string name="always_choice">Always</string>
     <string name="never_choice">Never</string>
@@ -201,8 +201,8 @@
     <string name="dock_label">Dock</string>
     <string name="dock_description">Search bar, icon count</string>
 
-    <string name="app_drawer_label">App drawer</string>
-    <string name="app_drawer_description">Hidden apps, column count, icons</string>
+    <string name="app_drawer_label">App Library</string>
+    <string name="app_drawer_description">Hidden apps, icons</string>
 
     <string name="drawer_search_label">Drawer search</string>
     <string name="drawer_search_description">Web suggestions, global search</string>
@@ -666,7 +666,7 @@
     <string name="gesture_handler_open_quick_settings">Open Quick Settings</string>
     <string name="gesture_handler_open_app_option">Open app</string>
     <string name="gesture_handler_open_app_config">Open %1$s</string>
-    <string name="gesture_handler_open_app_drawer">Open app drawer</string>
+    <string name="gesture_handler_open_app_drawer">Open App Library</string>
     <string name="gesture_handler_open_app_search">Open app search</string>
     <string name="gesture_handler_open_search">Open search</string>
     <string name="gesture_handler_open_assistant">Open assistant</string>
@@ -876,7 +876,7 @@
     <string name="search_provider_vivaldi" translatable="false">Vivaldi</string>
     <string name="search_provider_custom">Custom</string>
 
-    <string name="search_provider_sponsored_description">%1$s and Lawnchair have a revenue share agreement.\n\nSearching with %1$s helps support Lawnchair.</string>
+    <string name="search_provider_sponsored_description">%1$s is a sponsored search provider.</string>
 
     <string name="app_label">App</string>
     <string name="website_label">Website</string>
@@ -1096,12 +1096,37 @@
     <string name="please_wait">Please wait…</string>
     <!-- Glow -->
     <string name="glow_themes">Themes</string>
+    <string name="glow_hint_library">Swipe left past the last page for the App Library</string>
+    <string name="glow_hint_edit">Touch and hold the home screen to edit it</string>
+    <string name="glow_hint_search">Tap Search on the home screen to find any app</string>
+    <string name="glow_welcome_title">Welcome to Glow</string>
+    <string name="glow_welcome_look">Pick a look. You can change it any time in Themes.</string>
+    <string name="glow_welcome_keep">Keep my wallpaper</string>
+    <string name="glow_welcome_restore">Restore from a backup</string>
+    <string name="glow_welcome_tips">Three gestures worth knowing</string>
+    <string name="glow_welcome_start">Start</string>
+    <string name="glow_settings_look">Look</string>
+    <string name="glow_settings_themes_description">Wallpaper and accent colour in one tap</string>
+    <string name="glow_settings_wallpapers_description">Glow wallpapers or your own picture</string>
+    <string name="glow_settings_library">App Library and search</string>
+    <string name="glow_settings_more">Backup and info</string>
+    <string name="glow_open_library">Open App Library</string>
+    <string name="glow_dock_glass_frost">Glass frost</string>
+    <string name="glow_about_release_notes">What\'s new</string>
+    <string name="glow_about_source">Source code</string>
+    <string name="glow_about_based_on">Glow is based on Lawnchair and Launcher3 (Apache License 2.0).</string>
+    <string name="glow_wallpaper_and_themes">Wallpaper &amp; Themes</string>
+    <string name="glow_all_wallpapers">All wallpapers</string>
+    <string name="glow_updates">Glow updates</string>
+    <string name="glow_update_auto">Check automatically</string>
+    <string name="glow_update_auto_description">Look for a new Glow version every few hours</string>
     <string name="glow_exit_edit_mode">Exit edit mode</string>
     <string name="glow_more_wallpapers">More wallpapers</string>
     <string name="glow_wallpaper_apply">Set wallpaper</string>
     <string name="glow_wallpaper_home">Home screen</string>
     <string name="glow_wallpaper_lock">Lock screen</string>
     <string name="glow_wallpaper_both">Home and lock screens</string>
+    <string name="glow_wallpaper_applying">Applying…</string>
     <string name="glow_wallpaper_applied">Wallpaper set</string>
     <string name="glow_wallpaper_failed">Couldn\'t set wallpaper</string>
     <string name="glow_app_lock">Lock app</string>
@@ -1110,6 +1135,7 @@
     <string name="glow_app_unlocked">App unlocked</string>
     <string name="glow_app_lock_needs_screen_lock">Set a screen lock in system settings to lock apps</string>
     <string name="glow_app_lock_prompt">Open %1$s</string>
+    <string name="glow_dock_search_pill_note">The Search button above the dock is on. To use a search bar in the dock, pick another page indicator style in Customize.</string>
     <string name="glow_app_share">Share</string>
     <string name="glow_theme_apply">Apply</string>
     <string name="glow_theme_applied">Theme applied</string>
@@ -1163,7 +1189,7 @@
     <string name="glow_size_medium">Default</string>
     <string name="glow_size_large">Large</string>
     <string name="glow_grid_format">%1$d × %2$d</string>
-    <string name="glow_customize_indicator">Pages</string>
+    <string name="glow_customize_indicator">Indicator</string>
     <string name="glow_indicator_search">Search</string>
     <string name="glow_indicator_dots">Dots</string>
     <string name="glow_indicator_capsule">Capsule</string>
@@ -1179,6 +1205,7 @@
     <string name="glow_update_checking">Checking for updates…</string>
     <string name="glow_update_latest">You have the latest version of Glow</string>
     <string name="glow_update_failed">Couldn\'t update Glow. Check the connection and try again.</string>
+    <string name="glow_update_check_failed">Couldn\'t check for updates. Check the connection and try again.</string>
     <string name="glow_update_available">Glow %1$s is available</string>
     <string name="glow_update_message">The update installs over the current version. Your home screen and settings stay as they are.</string>
     <string name="glow_update_install">Update</string>
@@ -1198,4 +1225,7 @@
     <string name="glow_close">Close</string>
     <string name="glow_grid_changed">Grid changed to %1$d × %2$d</string>
     <string name="glow_app_lock_inactive">App lock is off: there is no screen lock on this device</string>
+    <string name="glow_library_move">Move to folder</string>
+    <string name="glow_library_move_auto">Automatic</string>
+    <string name="glow_library_moved">%1$s → %2$s</string>
 </resources>

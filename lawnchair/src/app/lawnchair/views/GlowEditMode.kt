@@ -20,7 +20,6 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.TimeAnimator
 import android.animation.ValueAnimator
-import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
@@ -380,7 +379,8 @@ object GlowEditMode {
     }
 
     private fun findBadgeHit(container: ShortcutAndWidgetContainer, x: Float, y: Float): View? {
-        val slop = 18f * container.resources.displayMetrics.density
+        // 24dp radius: a 48dp touch target around the small badge
+        val slop = 24f * container.resources.displayMetrics.density
         for (i in container.childCount - 1 downTo 0) {
             val child = container.getChildAt(i)
             if (!hasBadge(container, child)) continue
@@ -437,6 +437,12 @@ object GlowEditMode {
         return pressedContainer?.get() === container
     }
 
+    /** Same as dragging to "Remove": the item goes away with an "Undo" snackbar. */
+    private fun removeWithUndo(launcher: Launcher, view: View, info: ItemInfo) {
+        launcher.modelWriter.prepareToUndoDelete()
+        com.android.launcher3.DropTargetHandler(launcher).onDeleteComplete(info, view)
+    }
+
     private fun confirmRemove(launcher: Launcher, view: View) {
         val info = view.tag as? ItemInfo ?: return
         val title = info.title?.toString()?.takeIf { it.isNotBlank() }
@@ -446,19 +452,26 @@ object GlowEditMode {
             is LauncherAppWidgetInfo -> R.string.glow_remove_widget_message
             else -> R.string.glow_remove_app_message
         }
-        val builder = AlertDialog.Builder(launcher, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(launcher.getString(R.string.glow_remove_title, title))
-            .setMessage(message)
-            .setNegativeButton(R.string.glow_cancel, null)
+        val sheet = GlowSheet(launcher)
+            .title(launcher.getString(R.string.glow_remove_title, title), launcher.getString(message))
 
         val pkg = (info as? WorkspaceItemInfo)
             ?.takeIf { it.itemType == com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPLICATION }
             ?.targetPackage
-        if (pkg != null) {
-            builder.setPositiveButton(R.string.glow_remove_from_home) { _, _ ->
-                launcher.removeItem(view, info, true, "Glow edit mode remove badge")
-            }
-            builder.setNeutralButton(R.string.glow_delete_app) { _, _ ->
+        // System apps can't be uninstalled, so they only get "Remove from Home screen"
+        val removable = pkg != null && runCatching {
+            val apps = launcher.getSystemService(android.content.pm.LauncherApps::class.java)
+            val flags = apps.getApplicationInfo(pkg, 0, info.user).flags
+            (flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0
+        }.getOrDefault(false)
+        val label = if (pkg != null) R.string.glow_remove_from_home else R.string.glow_remove
+        sheet.choice(launcher.getString(label), primary = true) {
+            sheet.dismiss()
+            removeWithUndo(launcher, view, info)
+        }
+        if (pkg != null && removable) {
+            sheet.choice(launcher.getString(R.string.glow_delete_app)) {
+                sheet.dismiss()
                 runCatching {
                     launcher.startActivity(
                         Intent(Intent.ACTION_DELETE, Uri.fromParts("package", pkg, null))
@@ -467,11 +480,8 @@ object GlowEditMode {
                     )
                 }
             }
-        } else {
-            builder.setPositiveButton(R.string.glow_remove) { _, _ ->
-                launcher.removeItem(view, info, true, "Glow edit mode remove badge")
-            }
         }
-        builder.show()
+        sheet.choice(launcher.getString(R.string.glow_cancel)) { sheet.dismiss() }
+        sheet.show()
     }
 }

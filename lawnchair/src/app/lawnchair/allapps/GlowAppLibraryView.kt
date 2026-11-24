@@ -152,6 +152,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
     init {
         addView(tiles, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         setBottomInset(0)
+        liveViews.add(this)
     }
 
     fun setBottomInset(bottom: Int) {
@@ -190,6 +191,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 if (gen != generation) return@execute
                 categories = result
                 tilesAdapter.notifyDataSetChanged()
+                refreshOpenList()
             }
         }
     }
@@ -282,7 +284,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
             clipChildren = false
             clipToPadding = false
         }
-        val apps = category.apps
+        // Big icons are the apps used most; "Recently added" keeps its newest-first order
+        val apps = if (category.key == "recent") category.apps else GlowLaunchStats.ranked(context, category.apps)
         val bigCount = if (apps.size <= 4) apps.size else 3
         for (i in 0 until bigCount) {
             addBigIcon(square, apps[i], geo, i)
@@ -494,7 +497,18 @@ class GlowAppLibraryView @JvmOverloads constructor(
     private var listOverlay: View? = null
     private var listView: RecyclerView? = null
 
-    private fun openList() {
+    /** Rebuilds an open A-Z list in place (an app was installed, removed or renamed). */
+    private fun refreshOpenList() {
+        val list = listView ?: return
+        val lm = list.layoutManager as? LinearLayoutManager ?: return
+        val first = lm.findFirstVisibleItemPosition()
+        val offset = lm.findViewByPosition(first)?.top ?: 0
+        closeList(animate = false)
+        openList(animateIn = false)
+        if (first > 0) (listView?.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(first, offset)
+    }
+
+    private fun openList(animateIn: Boolean = true) {
         if (listOverlay != null) return
         val apps = appsProvider?.invoke() ?: return
         val collator = java.text.Collator.getInstance(Locale.getDefault())
@@ -516,7 +530,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
         }
         if (hasPrivateSpace?.invoke() == true && onShowAllApps != null) rows += Row.PrivateSpace
 
-        val animate = GlowGlass.animationsEnabled()
+        val animate = animateIn && GlowGlass.animationsEnabled()
         val overlay = FrameLayout(context).apply {
             alpha = if (animate) 0f else 1f
             isClickable = true
@@ -546,7 +560,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
         overlay.addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
         // Index strip: tap or slide over a letter to jump to its section (TalkBack users scroll the list)
-        val letters = sections.keys.toList()
+        // One slot is about 15dp; with Latin and Cyrillic names there can be ~60 letters,
+        // so the strip is condensed with dots when they don't fit (like iOS)
+        val stripHeight = height - dp(GlowGlass.MIN_TOUCH_DP + 4) - bottomInset - dp(24)
+        val entries = GlowCategoryRules.condensedIndex(sections.keys.toList(), (stripHeight / dp(15)).coerceAtLeast(3))
+        val letters = entries.map { it.second }
         val bubble = TextView(context).apply {
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f)
@@ -560,11 +578,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-            letters.forEach { l ->
+            entries.forEach { (label, _) ->
                 addView(TextView(context).apply {
-                    text = l
+                    text = label
                     setTextColor(Color.argb(230, 255, 255, 255))
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                     typeface = Typeface.DEFAULT_BOLD
                     gravity = Gravity.CENTER
                     includeFontPadding = false
@@ -608,7 +626,8 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 true
             }
         }
-        overlay.addView(index, LayoutParams(dp(INDEX_WIDTH_DP), LayoutParams.MATCH_PARENT, Gravity.END).apply {
+        // 44dp wide touch strip; the letters stay a narrow column at the edge
+        overlay.addView(index, LayoutParams(dp(INDEX_TOUCH_WIDTH_DP), LayoutParams.MATCH_PARENT, Gravity.END).apply {
             topMargin = dp(GlowGlass.MIN_TOUCH_DP + 4)
             bottomMargin = bottomInset + dp(24)
         })
@@ -686,6 +705,11 @@ class GlowAppLibraryView @JvmOverloads constructor(
         foreground = ta.getDrawable(0)
         ta.recycle()
         setOnClickListener(launcher.itemOnClickListener)
+        setOnLongClickListener { row ->
+            val icon = ((row as ViewGroup).getChildAt(1) as ViewGroup).getChildAt(0)
+                .let { (it as ViewGroup).getChildAt(0) }
+            icon != null && launcher.allAppsItemLongClickListener.onLongClick(icon)
+        }
         // divider
         addView(View(context).apply { setBackgroundColor(Color.argb(40, 255, 255, 255)) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, (density * 0.5f).toInt())).apply {
@@ -698,9 +722,10 @@ class GlowAppLibraryView @JvmOverloads constructor(
             minimumHeight = dp(GlowGlass.MIN_TOUCH_DP + 8)
             setPadding(dp(SIDE_PADDING_DP + 4), dp(6), dp(INDEX_WIDTH_DP), dp(6))
         }
-        row.addView(ImageView(context).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        // A real launcher icon (scaled to 42dp) so long-press opens the usual menu and drag
+        row.addView(FrameLayout(context).apply {
+            clipChildren = false
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         }, LinearLayout.LayoutParams(dp(42), dp(42)))
         row.addView(TextView(context).apply {
             setTextColor(Color.WHITE)
@@ -721,7 +746,24 @@ class GlowAppLibraryView @JvmOverloads constructor(
         view.contentDescription = app.contentDescription ?: app.title
         view.getChildAt(0).visibility = if (divider) VISIBLE else INVISIBLE
         val row = view.getChildAt(1) as LinearLayout
-        (row.getChildAt(0) as ImageView).setImageDrawable(app.newIcon(context))
+        val holder = row.getChildAt(0) as FrameLayout
+        holder.removeAllViews()
+        val icon = LayoutInflater.from(context)
+            .inflate(R.layout.all_apps_icon, holder, false) as BubbleTextView
+        icon.applyFromApplicationInfo(app)
+        icon.setTextVisibility(false)
+        icon.setCenterVertically(false)
+        icon.compoundDrawablePadding = 0
+        icon.setPadding(0, 0, 0, 0)
+        icon.isClickable = false
+        icon.isLongClickable = false
+        icon.isFocusable = false
+        val size = icon.iconSize.takeIf { it > 0 } ?: dp(42)
+        icon.pivotX = 0f
+        icon.pivotY = 0f
+        icon.scaleX = dp(42).toFloat() / size
+        icon.scaleY = icon.scaleX
+        holder.addView(icon, LayoutParams(size, size))
         (row.getChildAt(1) as TextView).text = app.title
     }
 
@@ -742,6 +784,9 @@ class GlowAppLibraryView @JvmOverloads constructor(
         }
         return true
     }
+
+    /** True while a category or the alphabetical list is open over the tiles. */
+    fun hasOpenOverlay(): Boolean = folderOverlay != null || listOverlay != null
 
     /** Closes an open category or the alphabetical list. Returns true if one was open. */
     fun closeCategory(animate: Boolean = true): Boolean {
@@ -839,6 +884,7 @@ class GlowAppLibraryView @JvmOverloads constructor(
         private const val MINI_GAP_RATIO = 0.12f
         private const val PILL_HEIGHT_DP = 32
         private const val INDEX_WIDTH_DP = 30
+        private const val INDEX_TOUCH_WIDTH_DP = 44
         private const val RECENT_COUNT = 8
         private const val RECENT_WINDOW_MS = 14L * 24 * 60 * 60 * 1000
         private const val REBUILD_DELAY_MS = 300L
@@ -848,6 +894,40 @@ class GlowAppLibraryView @JvmOverloads constructor(
 
         /** package -> first install time. */
         private val installCache = ConcurrentHashMap<String, Long>()
+
+        private const val OVERRIDES_PREFS = "glow_library_categories"
+
+        /** Library views alive right now, rebuilt when the user moves an app. */
+        private val liveViews: MutableSet<GlowAppLibraryView> =
+            java.util.Collections.newSetFromMap(java.util.WeakHashMap())
+
+        private fun overrides(context: Context) =
+            context.applicationContext.getSharedPreferences(OVERRIDES_PREFS, Context.MODE_PRIVATE)
+
+        /** The folder the user picked for [pkg], or null when it is sorted automatically. */
+        @JvmStatic
+        fun userCategory(context: Context, pkg: String): String? =
+            overrides(context).getString(pkg, null)?.takeIf { it in GROUP_LABELS }
+
+        /**
+         * Puts [pkg] in [group] for good, or back to automatic sorting when [group] is null,
+         * and redraws the library.
+         */
+        @JvmStatic
+        fun moveApp(context: Context, pkg: String, group: String?) {
+            overrides(context).edit().apply {
+                if (group == null) remove(pkg) else putString(pkg, group)
+            }.apply()
+            groupCache.remove(pkg)
+            MAIN_EXECUTOR.execute { liveViews.toList().forEach { it.rebuild() } }
+        }
+
+        /** Folders an app can be moved to, as (key, label) in tile order. */
+        @JvmStatic
+        fun movableCategories(context: Context): List<Pair<String, String>> =
+            GlowCategoryRules.MOVABLE_GROUPS.mapNotNull { key ->
+                GROUP_LABELS[key]?.let { key to context.getString(it) }
+            }
 
         /** Forgets what is cached about a package (call when it is installed again or updated). */
         @JvmStatic
@@ -913,10 +993,13 @@ class GlowAppLibraryView @JvmOverloads constructor(
 
         private fun categorize(context: Context, apps: List<AppInfo>, pots: List<Flowerpot>): List<Category> {
             val pm = context.packageManager
+            val picked = runCatching { overrides(context).all }.getOrDefault(emptyMap())
             val groups = linkedMapOf<String, MutableList<AppInfo>>()
             val assigned = HashSet<String>()
 
-            // 1. Flowerpot rules (curated package/intent lists), only for packages not cached yet
+            // Flowerpot matches (package lists and broad intent rules, e.g. "anything with
+            // search is a tool"): only a hint below the app's own category and keywords
+            val potGroups = HashMap<String, String>()
             val uncached = apps.filter { it.targetPackage != null && !groupCache.containsKey(it.targetPackage) }
             if (uncached.isNotEmpty()) {
                 for (pot in pots) {
@@ -924,20 +1007,23 @@ class GlowAppLibraryView @JvmOverloads constructor(
                     val matched = runCatching { pot.categorizeApps(uncached).values.flatten() }.getOrDefault(emptyList())
                     for (app in matched) {
                         val pkg = app.targetPackage ?: continue
-                        groupCache.putIfAbsent(pkg, group)
+                        potGroups.putIfAbsent(pkg, group)
                     }
                 }
             }
 
-            // 2. Android's own app category, 3. package/label keywords, 4. system apps -> utilities
-            for (app in apps) {
+            // 1. well-known apps, 2. Android's own app category, 3. package/label keywords,
+            // 4. Flowerpot, 5. system apps -> utilities
+            for (app in libraryUnique(apps)) {
                 val key = app.toComponentKey().toString()
                 if (!assigned.add(key)) continue
                 val pkg = app.targetPackage ?: continue
-                val group = groupCache.getOrPut(pkg) {
+                val group = (picked[pkg] as? String)?.takeIf { it in GROUP_LABELS } ?: groupCache.getOrPut(pkg) {
                     val info = runCatching { pm.getApplicationInfo(pkg, 0) }.getOrNull()
-                    info?.let { androidCategory(it) }
+                    GlowCategoryRules.knownCategory(pkg)
+                        ?: info?.let { androidCategory(it) }
                         ?: GlowCategoryRules.keywordCategory(pkg, app.title?.toString())
+                        ?: potGroups[pkg]
                         ?: if (info != null && info.flags and ApplicationInfo.FLAG_SYSTEM != 0) {
                             GlowCategoryRules.UTILITIES
                         } else {
@@ -950,12 +1036,16 @@ class GlowAppLibraryView @JvmOverloads constructor(
             val byTitle = compareBy<AppInfo> { it.title?.toString()?.lowercase(Locale.getDefault()) ?: "" }
             val result = mutableListOf<Category>()
 
-            recentlyAdded(pm, apps).takeIf { it.isNotEmpty() }?.let {
+            recentlyAdded(pm, libraryUnique(apps)).takeIf { it.isNotEmpty() }?.let {
                 result += Category("recent", context.getString(R.string.glow_library_recent), it)
             }
             groups.filterKeys { it != GlowCategoryRules.OTHER }
                 .entries
-                .sortedByDescending { it.value.size }
+                .sortedWith(
+                    compareBy<Map.Entry<String, MutableList<AppInfo>>> {
+                        GlowCategoryRules.TILE_ORDER.indexOf(it.key).let { i -> if (i < 0) Int.MAX_VALUE else i }
+                    }.thenByDescending { it.value.size },
+                )
                 .forEach { (group, list) ->
                     val label = GROUP_LABELS[group] ?: R.string.glow_library_other
                     result += Category(group, context.getString(label), list.sortedWith(byTitle))
@@ -964,6 +1054,24 @@ class GlowAppLibraryView @JvmOverloads constructor(
                 result += Category(GlowCategoryRules.OTHER, context.getString(R.string.glow_library_other), it.sortedWith(byTitle))
             }
             return result
+        }
+
+        /**
+         * One entry per app for the library tiles. The same app can reach the launcher several
+         * times: a clone ("Dual apps" / second space) or work-profile copy, or a second launcher
+         * activity with the same name. Those looked like duplicate icons side by side in a
+         * category, so only the first copy is kept, preferring the personal profile. Copies
+         * stay reachable from the A–Z list and search, which keep their profile badge.
+         */
+        @JvmStatic
+        fun libraryUnique(apps: List<AppInfo>): List<AppInfo> {
+            val main = android.os.Process.myUserHandle()
+            return apps
+                .sortedBy { if (it.user == main) 0 else 1 } // stable: keeps the original order otherwise
+                .distinctBy { app ->
+                    val pkg = app.targetPackage ?: app.toComponentKey().toString()
+                    pkg + "\u0000" + (app.title?.toString()?.trim()?.lowercase(Locale.ROOT) ?: "")
+                }
         }
 
         private fun androidCategory(info: ApplicationInfo): String? {

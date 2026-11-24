@@ -70,10 +70,31 @@ fun DockSearchPreference(
     val qsbHotseatStrokeWidth = prefs.hotseatQsbStrokeWidth.getAdapter()
     val strokeColorStyleAdapter = prefs2.strokeColorStyle.getAdapter()
     val hotseatQsbProviderAdapter by prefs2.hotseatQsbProvider.getAdapter()
+    // Glow: with the "Search" pill above the dock a second search bar would duplicate it
+    val glowSearchPill = prefs.glowPageIndicatorStyle.getAdapter().state.value ==
+        app.lawnchair.views.GlowPageIndicator.STYLE_SEARCH
 
     Crossfade(isHotseatEnabled.state.value, label = "transition", modifier = modifier) { hotseatEnabled ->
         val isLawnchairHotseat = hotseatModeAdapter.state.value == LawnchairHotseat
-        if (hotseatEnabled) {
+        if (hotseatEnabled && glowSearchPill) {
+            PreferenceTemplate(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                title = {},
+                description = {
+                    Text(
+                        text = stringResource(id = R.string.glow_dock_search_pill_note),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                startWidget = {
+                    Icon(
+                        imageVector = Icons.Rounded.TipsAndUpdates,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        contentDescription = null,
+                    )
+                },
+            )
+        } else if (hotseatEnabled) {
             Column {
                 PreferenceGroup {
                     HotseatModePreference(

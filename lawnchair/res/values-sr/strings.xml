@@ -689,7 +689,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">Претрага апликација</string>
     <string name="search_provider_custom">Прилагођена</string>
-    <string name="search_provider_sponsored_description">%1$s и Lawnchair имају уговор о подели прихода.\n\nПретраживањем помоћу услуге %1$s подржавате Lawnchair.</string>
     <string name="app_label">Апликација</string>
     <string name="website_label">Сајт</string>
     <string name="qsb_search_provider_app_required">Потребна је апликација</string>

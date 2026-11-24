@@ -1,7 +1,6 @@
 package app.lawnchair.ui.popup
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.app.AppGlobals
 import android.content.ComponentName
 import android.content.Context
@@ -256,32 +255,34 @@ class LawnchairShortcut {
             val launcherApps = context.getSystemService(LauncherApps::class.java) ?: return
             val appInfo = launcherApps.getApplicationInfo(packageName, 0, mItemInfo.user)
             val appLabel = context.packageManager.getApplicationLabel(appInfo)
-            AlertDialog.Builder(context)
-                .setIcon(R.drawable.ic_hourglass_top)
-                .setTitle(context.getString(R.string.pause_apps_dialog_title, appLabel))
-                .setMessage(context.getString(R.string.pause_apps_dialog_message, appLabel))
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.pause) { _, _ ->
-                    try {
-                        AppGlobals.getPackageManager().setPackagesSuspendedAsUser(
-                            arrayOf(mItemInfo.targetComponent?.packageName ?: ""),
-                            true, null, null,
-                            SuspendDialogInfo.Builder()
-                                .setIcon(R.drawable.ic_hourglass_top)
-                                .setTitle(R.string.paused_apps_dialog_title)
-                                .setMessage(R.string.paused_apps_dialog_message)
-                                .setNeutralButtonAction(SuspendDialogInfo.BUTTON_ACTION_UNSUSPEND)
-                                .build(),
-                            0,
-                            context.opPackageName,
-                            context.userId,
-                            mItemInfo.user.identifier,
-                        )
-                    } catch (e: Throwable) {
-                        Log.e("LawnchairShortcut", "Failed to pause app", e)
-                    }
+            val sheet = app.lawnchair.views.GlowSheet(mTarget)
+                .title(
+                    context.getString(R.string.pause_apps_dialog_title, appLabel),
+                    context.getString(R.string.pause_apps_dialog_message, appLabel),
+                )
+            sheet.choice(context.getString(R.string.pause), primary = true) {
+                sheet.dismiss()
+                try {
+                    AppGlobals.getPackageManager().setPackagesSuspendedAsUser(
+                        arrayOf(mItemInfo.targetComponent?.packageName ?: ""),
+                        true, null, null,
+                        SuspendDialogInfo.Builder()
+                            .setIcon(R.drawable.ic_hourglass_top)
+                            .setTitle(R.string.paused_apps_dialog_title)
+                            .setMessage(R.string.paused_apps_dialog_message)
+                            .setNeutralButtonAction(SuspendDialogInfo.BUTTON_ACTION_UNSUSPEND)
+                            .build(),
+                        0,
+                        context.opPackageName,
+                        context.userId,
+                        mItemInfo.user.identifier,
+                    )
+                } catch (e: Throwable) {
+                    Log.e("LawnchairShortcut", "Failed to pause app", e)
                 }
-                .show()
+            }
+            sheet.choice(context.getString(android.R.string.cancel)) { sheet.dismiss() }
+            sheet.show()
             AbstractFloatingView.closeAllOpenViews(mTarget)
         }
     }

@@ -677,7 +677,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">Pencarian apli</string>
     <string name="search_provider_custom">Kustom</string>
-    <string name="search_provider_sponsored_description">%1$s dan Lawnchair memiliki persetujuan pembagian hasil.\n\nMencari dengan %1$s membantu mendukung Lawnchair.</string>
     <string name="app_label">Aplikasi</string>
     <string name="website_label">Website</string>
     <string name="qsb_search_provider_app_required">Aplikasi diperlukan</string>

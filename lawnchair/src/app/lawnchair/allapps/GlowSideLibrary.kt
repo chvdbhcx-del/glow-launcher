@@ -48,11 +48,31 @@ object GlowSideLibrary {
     private fun direction(view: View): Int =
         if (view.layoutDirection == View.LAYOUT_DIRECTION_RTL) -1 else 1
 
+    /**
+     * Set when the library opens from the Search pill: like Spotlight it fades in over the
+     * blurred home screen instead of sliding in from the side. Cleared once it is hidden.
+     */
+    @JvmStatic
+    var spotlight = false
+
     @JvmStatic
     fun applyProgress(launcher: Launcher, progress: Float) {
         val appsView = launcher.appsView ?: return
+        val p = progress.coerceIn(0f, 1f)
+        if (spotlight) {
+            appsView.translationX = 0f
+            appsView.alpha = 1f - p
+            if (p >= 1f) {
+                spotlight = false
+                appsView.alpha = 1f
+                appsView.translationX = direction(appsView) * (launcher.dragLayer?.width ?: appsView.width).toFloat()
+            }
+            launcher.scrimView?.invalidate()
+            return
+        }
+        if (appsView.alpha != 1f) appsView.alpha = 1f
         val width = launcher.dragLayer?.width?.takeIf { it > 0 } ?: appsView.width
-        appsView.translationX = direction(appsView) * progress.coerceIn(0f, 1f) * width
+        appsView.translationX = direction(appsView) * p * width
         // The sheet's background is painted by the scrim from the container's position
         launcher.scrimView?.invalidate()
     }
@@ -60,6 +80,8 @@ object GlowSideLibrary {
     @JvmStatic
     fun clear(launcher: Launcher) {
         val appsView = launcher.appsView ?: return
+        spotlight = false
+        if (appsView.alpha != 1f) appsView.alpha = 1f
         if (appsView.translationX != 0f) {
             appsView.translationX = 0f
             launcher.scrimView?.invalidate()

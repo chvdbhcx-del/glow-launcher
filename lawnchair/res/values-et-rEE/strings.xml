@@ -683,7 +683,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">Rakenduse otsing</string>
     <string name="search_provider_custom">Kohandatud</string>
-    <string name="search_provider_sponsored_description">%1$s ja Lawnchairil on tulu jagamise leping.\n\nOtsing %1$s abil aitab Lawnchairi toetada.</string>
     <string name="app_label">Rakendus</string>
     <string name="website_label">Veebileht</string>
     <string name="qsb_search_provider_app_required">Vajalik on rakendus</string>

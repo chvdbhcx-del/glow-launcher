@@ -34,7 +34,6 @@ import app.lawnchair.preferences2.preferenceManager2
 import app.lawnchair.theme.color.ColorMode
 import app.lawnchair.ui.preferences.LocalIsExpandedScreen
 import app.lawnchair.ui.preferences.components.FeedPreference
-import app.lawnchair.ui.preferences.components.GestureHandlerPreference
 import app.lawnchair.ui.preferences.components.HomeLayoutSettings
 import app.lawnchair.ui.preferences.components.NavigationActionPreference
 import app.lawnchair.ui.preferences.components.OverlayHandlerPreference
@@ -91,15 +90,6 @@ fun HomeScreenPreferences(
                     enabled = lockHomeScreenAdapter.state.value.not(),
                 )
             }
-            GestureHandlerPreference(
-                adapter = prefs2.doubleTapGestureHandler.getAdapter(),
-                label = stringResource(id = R.string.gesture_double_tap),
-            )
-            SwitchPreference(
-                prefs.infiniteScrolling.getAdapter(),
-                label = stringResource(id = R.string.infinite_scrolling_label),
-                description = stringResource(id = R.string.infinite_scrolling_description),
-            )
         }
         PreferenceGroup(heading = stringResource(id = R.string.home_screen_actions)) {
             ClickablePreference(
@@ -177,8 +167,11 @@ fun HomeScreenPreferences(
                 description = stringResource(id = R.string.home_screen_lock_description),
             )
         }
-        PreferenceGroup(heading = stringResource(id = R.string.popup_menu)) {
-            LauncherPopupPreferenceItem()
+        // Glow: long-press opens edit mode; this menu only shows while the layout is locked
+        ExpandAndShrink(visible = lockHomeScreenAdapter.state.value) {
+            PreferenceGroup(heading = stringResource(id = R.string.popup_menu)) {
+                LauncherPopupPreferenceItem()
+            }
         }
         val showStatusBarAdapter = prefs2.showStatusBar.getAdapter()
         PreferenceGroup(heading = stringResource(id = R.string.status_bar_label)) {

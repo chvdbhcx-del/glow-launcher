@@ -593,6 +593,12 @@ public class Launcher extends StatefulActivity<LauncherState>
             return topView;
         }
 
+        // Glow: an open App Library category or A-Z list closes before the drawer does
+        if (isInState(LauncherState.ALL_APPS) && mAppsView != null
+                && mAppsView.glowCanHandleBack()) {
+            return mAppsView::glowHandleBack;
+        }
+
         // #4 Custom back handlers
         for (BackPressHandler handler : mBackPressedHandlers) {
             if (handler.canHandleBack()) {

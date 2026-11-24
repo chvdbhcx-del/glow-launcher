@@ -684,7 +684,6 @@ Essa nova versão é atualização Major e pode ser menos estável\".</string>
     <!-- Search providers -->
     <string name="search_provider_app_search">Pesquisa de aplicativos</string>
     <string name="search_provider_custom">Personalizar</string>
-    <string name="search_provider_sponsored_description">%1$s e Lawnchair têm um acordo de participação na receita.\n\nPesquisar usando %1$s ajuda a apoiar o Lawnchair.</string>
     <string name="app_label">Aplicativo</string>
     <string name="website_label">Site da Internet</string>
     <string name="qsb_search_provider_app_required">Aplicativo necessário</string>

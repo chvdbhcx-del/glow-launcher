@@ -131,6 +131,12 @@ public class PackageUpdatedTask implements ModelUpdateTask {
                     + " packages=" + Arrays.toString(packages)
                     + ", user=" + mUser);
         }
+        if (mOp == OP_ADD || mOp == OP_UPDATE || mOp == OP_REMOVE) {
+            // Glow: an installed, updated or removed app gets its library category recomputed
+            for (String pkg : packages) {
+                app.lawnchair.allapps.GlowAppLibraryView.invalidatePackage(pkg);
+            }
+        }
         switch (mOp) {
             case OP_ADD: {
                 for (int i = 0; i < packageCount; i++) {

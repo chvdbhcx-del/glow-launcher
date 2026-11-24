@@ -1,0 +1,49 @@
+name: UX audit crawl
+
+# Taps every control of a published test build on an emulator (review only).
+on:
+  push:
+    branches: [ claude/project-thread-0uaa86 ]
+    paths: [ '.github/scripts/ux_*', '.github/workflows/ux-audit.yml' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag of the APK'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    env:
+      APK_TAG: ${{ github.event.inputs.tag || 'v1.0.0-test26' }}
+      GH_TOKEN: ${{ github.token }}
+      CRAWL_BUDGET_S: '3300'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Download APK
+        run: gh release download "$APK_TAG" --pattern "Glow-Launcher-$APK_TAG.apk" --output glow.apk
+      - name: Run emulator and crawl
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash .github/scripts/ux_audit.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ux-audit
+          path: audit/
+          retention-days: 5

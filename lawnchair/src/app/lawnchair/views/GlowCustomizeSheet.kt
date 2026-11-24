@@ -59,6 +59,10 @@ import com.patrykmichalik.opto.core.setBlocking
  */
 class GlowCustomizeSheet(private val launcher: Launcher) {
 
+    /** The theme accent (Themes / Settings), not a fixed violet. */
+    private val ACCENT by lazy { GlowGlass.accent(launcher) }
+
+
     private val context: Context get() = launcher
     private val prefs = PreferenceManager.getInstance(launcher)
     private val prefs2 = PreferenceManager2.getInstance(launcher)
@@ -394,6 +398,7 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
             isFocusable = true
             contentDescription = label
         }
+        column.isSelected = selected
         val frame = FrameLayout(context).apply {
             tag = TAG_FRAME
             background = optionBackground(selected)
@@ -417,6 +422,8 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
     private fun markSelected(options: List<View>, selected: View) {
         options.forEach { option ->
             option.findViewWithTag<View>(TAG_FRAME)?.background = optionBackground(option === selected)
+            // TalkBack reads "selected" on the current option, not only the accent ring
+            option.isSelected = option === selected
         }
         // A small "tap" pop on the chosen option
         val frame = selected.findViewWithTag<View>(TAG_FRAME) ?: return
@@ -510,6 +517,5 @@ class GlowCustomizeSheet(private val launcher: Launcher) {
     companion object {
         private const val SHEET_CONTENT_HEIGHT = 104
         private const val TAG_FRAME = "glow_option_frame"
-        private val ACCENT = GlowGlass.ACCENT
     }
 }

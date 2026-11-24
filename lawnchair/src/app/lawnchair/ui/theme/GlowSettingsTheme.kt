@@ -50,8 +50,8 @@ object GlowSettingsColors {
 }
 
 /** One fixed dark palette: the glass needs a dark night behind it to read as glass. */
-fun glowColorScheme(): ColorScheme = darkColorScheme(
-    primary = GlowSettingsColors.Accent,
+fun glowColorScheme(accent: Color = GlowSettingsColors.Accent): ColorScheme = darkColorScheme(
+    primary = accent,
     onPrimary = GlowSettingsColors.OnAccent,
     primaryContainer = Color(0xFF5B2A86),
     onPrimaryContainer = Color(0xFFF6D9FF),
@@ -70,7 +70,7 @@ fun glowColorScheme(): ColorScheme = darkColorScheme(
     onSurface = GlowSettingsColors.Text,
     surfaceVariant = Color(0xFF2E2342),
     onSurfaceVariant = GlowSettingsColors.TextSecondary,
-    surfaceTint = GlowSettingsColors.Accent,
+    surfaceTint = accent,
     inverseSurface = Color(0xFFEDE4FA),
     inverseOnSurface = Color(0xFF231A30),
     outline = Color(0xFF75668F),

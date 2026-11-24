@@ -683,7 +683,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">Uygulama araması</string>
     <string name="search_provider_custom">Özel</string>
-    <string name="search_provider_sponsored_description">Lawnchar\'ın %1$s ile sponsorluk anlaşması vardır\n\n %1$s ile arama yaparak Lawnchair\'a katkı sağlayabilirsiniz.</string>
     <string name="app_label">Uygulama</string>
     <string name="website_label">İnternet sitesi</string>
     <string name="qsb_search_provider_app_required">Uygulama gerekli</string>

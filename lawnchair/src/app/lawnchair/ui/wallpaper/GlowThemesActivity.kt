@@ -17,7 +17,6 @@
 package app.lawnchair.ui.wallpaper
 
 import android.app.Activity
-import android.app.WallpaperManager
 import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.Typeface
@@ -33,15 +32,11 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import app.lawnchair.preferences2.PreferenceManager2
-import app.lawnchair.theme.color.ColorOption
 import app.lawnchair.ui.preferences.PreferenceActivity
 import app.lawnchair.ui.preferences.navigation.General
 import app.lawnchair.views.GlowGlass
 import com.android.launcher3.R
-import com.patrykmichalik.opto.core.setBlocking
 import java.util.concurrent.Executors
 
 /**
@@ -50,53 +45,42 @@ import java.util.concurrent.Executors
  */
 class GlowThemesActivity : Activity() {
 
-    private data class GlowTheme(
-        @StringRes val name: Int,
-        @DrawableRes val wallpaper: Int,
-        val accent: Int,
-    )
+    /** The theme accent (Themes / Settings), not a fixed violet. */
+    private val ACCENT by lazy { GlowGlass.accent(this) }
+
+
 
     private val executor = Executors.newSingleThreadExecutor()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.WHITE
-        window.navigationBarColor = Color.WHITE
-        // Dark status and navigation bar icons on the white page
-        window.decorView.systemUiVisibility =
-            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), 0, dp(20), dp(20))
         }
-        THEMES.forEach { list.addView(createCard(it)) }
+        GlowThemes.ALL.forEach { list.addView(createCard(it)) }
 
-        list.addView(TextView(this).apply {
-            setText(R.string.glow_theme_more_settings)
-            setTextColor(ACCENT)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                cornerRadius = dp(26).toFloat()
-                setStroke(dp(2), ACCENT)
-            }
-            setOnClickListener {
-                startActivity(PreferenceActivity.createIntent(this@GlowThemesActivity, General))
-            }
+        list.addView(outlinedButton(R.string.glow_all_wallpapers) {
+            startActivity(android.content.Intent(this, GlowWallpaperActivity::class.java))
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52)).apply {
+            topMargin = dp(8)
+        })
+
+        list.addView(outlinedButton(R.string.glow_theme_more_settings) {
+            startActivity(PreferenceActivity.createIntent(this@GlowThemesActivity, General))
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52)).apply {
             topMargin = dp(8)
         })
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.WHITE)
             fitsSystemWindows = true
         }
+        GlowWallpaperTarget.stylePage(this, root)
         root.addView(TextView(this).apply {
-            setText(R.string.glow_themes)
-            setTextColor(Color.BLACK)
+            setText(R.string.glow_wallpaper_and_themes)
+            setTextColor(GlowWallpaperTarget.TEXT)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(20), dp(20), dp(20), dp(12))
@@ -107,7 +91,21 @@ class GlowThemesActivity : Activity() {
         setContentView(root)
     }
 
-    private fun createCard(theme: GlowTheme): View {
+    private fun outlinedButton(@StringRes label: Int, onClick: () -> Unit) = TextView(this).apply {
+        setText(label)
+        setTextColor(ACCENT)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        background = GradientDrawable().apply {
+            cornerRadius = dp(26).toFloat()
+            setStroke(dp(2), ACCENT)
+        }
+        isClickable = true
+        setOnClickListener { onClick() }
+    }
+
+    private fun createCard(theme: GlowThemes.Theme): View {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(8), 0, dp(16))
@@ -157,7 +155,7 @@ class GlowThemesActivity : Activity() {
         }
         row.addView(TextView(this).apply {
             setText(theme.name)
-            setTextColor(Color.BLACK)
+            setTextColor(GlowWallpaperTarget.TEXT)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             typeface = Typeface.DEFAULT_BOLD
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
@@ -178,27 +176,22 @@ class GlowThemesActivity : Activity() {
         return card
     }
 
-    private fun applyTheme(theme: GlowTheme) {
+    private var busy: app.lawnchair.views.GlowSheet? = null
+
+    private fun applyTheme(theme: GlowThemes.Theme) {
+        if (busy != null) return
+        GlowWallpaperTarget.ask(this) { flags -> applyTheme(theme, flags) }
+    }
+
+    private fun applyTheme(theme: GlowThemes.Theme, which: Int) {
+        if (busy != null) return
         val appContext = applicationContext
+        busy = GlowWallpaperTarget.showBusy(this)
         executor.execute {
-            val ok = runCatching {
-                resources.openRawResource(theme.wallpaper).use { stream ->
-                    WallpaperManager.getInstance(appContext).setStream(
-                        stream,
-                        null,
-                        true,
-                        WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
-                    )
-                }
-            }.isSuccess
-            if (ok) {
-                // Written here on the background thread: setBlocking waits for the disk
-                runCatching {
-                    PreferenceManager2.getInstance(appContext).accentColor
-                        .setBlocking(ColorOption.CustomColor(theme.accent))
-                }
-            }
+            val ok = GlowThemes.applyBlocking(appContext, theme, which)
             runOnUiThread {
+                busy?.takeIf { !isDestroyed }?.dismiss()
+                busy = null
                 Toast.makeText(
                     appContext,
                     if (ok) R.string.glow_theme_applied else R.string.glow_wallpaper_failed,
@@ -219,15 +212,4 @@ class GlowThemesActivity : Activity() {
         value.toFloat(),
         resources.displayMetrics,
     ).toInt()
-
-    companion object {
-        private val ACCENT = GlowGlass.ACCENT
-
-        private val THEMES = listOf(
-            GlowTheme(R.string.glow_theme_violet, R.drawable.glow_wallpaper_violet, Color.rgb(0xB1, 0x4F, 0xE8)),
-            GlowTheme(R.string.glow_theme_rose, R.drawable.glow_wallpaper_rose, Color.rgb(0xE0, 0x4F, 0x76)),
-            GlowTheme(R.string.glow_theme_frost, R.drawable.glow_wallpaper_frost, Color.rgb(0x6F, 0x8F, 0xD8)),
-            GlowTheme(R.string.glow_theme_peach, R.drawable.glow_wallpaper_peach, Color.rgb(0xF0, 0x8A, 0x5D)),
-        )
-    }
 }

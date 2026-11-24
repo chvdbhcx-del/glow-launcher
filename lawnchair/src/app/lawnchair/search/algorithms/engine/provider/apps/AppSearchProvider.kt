@@ -37,8 +37,15 @@ object AppSearchProvider {
         // Do an intersection of the words in the query and each title, and filter out all the
         // apps that don't match all of the words in the query.
         val matcher = StringMatcherUtility.StringMatcher.getInstance()
+        val variants = app.lawnchair.search.algorithms.GlowSearchVariants.variants(query)
         return apps.asSequence()
-            .filter { StringMatcherUtility.matches(query, stripDiacritics(it.title.toString()), matcher) }
+            .filter {
+                app.lawnchair.search.algorithms.GlowSearchVariants.matches(
+                    variants,
+                    stripDiacritics(it.title.toString()),
+                    it.targetPackage,
+                ) { q, title -> StringMatcherUtility.matches(q, title, matcher) }
+            }
             .filterHiddenApps(query, hiddenApps, hiddenAppsInSearch)
             .take(maxResultsCount)
             .toList()

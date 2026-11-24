@@ -520,7 +520,10 @@ public class DeviceProfile {
 
         workspaceCellPaddingXPx = res.getDimensionPixelSize(R.dimen.dynamic_grid_cell_padding_x);
 
-        HotseatMode hotseatMode = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatMode());
+        mGlowSearchPill = app.lawnchair.views.GlowPageIndicator.STYLE_SEARCH.equals(
+                app.lawnchair.views.GlowPageIndicator.getStyle(context));
+        HotseatMode hotseatMode = app.lawnchair.views.GlowPageIndicator.effectiveHotseatMode(context,
+                PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatMode()));
         boolean isQsbEnable = hotseatMode.getLayoutResourceId() != R.layout.empty_view;
 
         numShownHotseatIcons = displayOptionSpec.numShownHotseatIcons;
@@ -899,11 +902,15 @@ public class DeviceProfile {
         }
     }
 
+    /** Glow: the "Search" pill replaces the dock search bar. */
+    private boolean mGlowSearchPill;
+
     /** Updates hotseatCellHeightPx and hotseatBarSizePx */
     private void updateHotseatSizes(int hotseatIconSizePx) {
         int iconTextHeight = Utilities.calculateTextHeight(iconTextSizePx);
         boolean isLabelInDock = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getEnableLabelInDock());
-        HotseatMode hotseatMode = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatMode());
+        HotseatMode hotseatMode = mGlowSearchPill ? app.lawnchair.hotseat.DisabledHotseat.INSTANCE
+                : PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatMode());
         boolean isQsbEnable = hotseatMode.getLayoutResourceId() != R.layout.empty_view;
         // LC-Note: Hidden dock labels need no text space; keep the minimum touch target.
         hotseatCellHeightPx = app.lawnchair.util.DockCellSize.calculate(

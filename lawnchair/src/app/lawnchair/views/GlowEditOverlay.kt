@@ -40,7 +40,6 @@ import app.lawnchair.preferences2.firstCached
 import app.lawnchair.ui.preferences.PreferenceActivity
 import app.lawnchair.ui.preferences.navigation.Root
 import app.lawnchair.ui.wallpaper.GlowThemesActivity
-import app.lawnchair.ui.wallpaper.GlowWallpaperActivity
 import com.android.launcher3.DropTarget
 import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherState
@@ -133,21 +132,14 @@ class GlowEditOverlay @JvmOverloads constructor(
             Triple(R.string.glow_customize, R.drawable.ic_glow_customize) {
                 GlowCustomizeSheet(launcher).show()
             },
-            Triple(R.string.glow_change_wallpaper, R.drawable.ic_glow_wallpaper) {
-                launcher.startActivity(Intent(launcher, GlowWallpaperActivity::class.java))
-            },
-            Triple(R.string.glow_themes, R.drawable.ic_glow_themes) {
+            // Wallpapers are one tap away inside Themes; updates live in Settings
+            Triple(R.string.glow_wallpaper_and_themes, R.drawable.ic_glow_themes) {
                 launcher.startActivity(Intent(launcher, GlowThemesActivity::class.java))
-            },
-            Triple(R.string.glow_update_check, R.drawable.ic_glow_update) {
-                app.lawnchair.update.GlowUpdater.checkNow(launcher)
             },
             Triple(R.string.glow_launcher_settings, R.drawable.ic_glow_settings) {
                 launcher.startActivity(PreferenceActivity.createIntent(launcher, Root))
             },
         )
-            // Play and local builds don't update themselves
-            .filter { it.first != R.string.glow_update_check || app.lawnchair.update.GlowUpdater.isSupported() }
         val dialog = object : Dialog(launcher) {
             // Tap outside or Back: shrink back into the "Edit" pill instead of vanishing
             override fun cancel() {

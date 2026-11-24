@@ -683,7 +683,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">ایپ کی تلاش</string>
     <string name="search_provider_custom">حسب ضرورت</string>
-    <string name="search_provider_sponsored_description">%1$s اور Lawnchair کا ریونیو شیئر کا معاہدہ ہے۔\n\n%1$s کے ساتھ تلاش کرنے سے Lawnchair کو سپورٹ کرنے میں مدد ملتی ہے۔</string>
     <string name="app_label">ایپ</string>
     <string name="website_label">ویب سائٹ</string>
     <string name="qsb_search_provider_app_required">ایپ درکار ہے۔</string>

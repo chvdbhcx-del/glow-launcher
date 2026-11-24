@@ -283,7 +283,7 @@ class LawnchairLauncher : QuickstepLauncher() {
     override fun getSupportedShortcuts(container: Int): Stream<SystemShortcut.Factory<*>> = Stream.concat(
         super.getSupportedShortcuts(container),
         Stream.concat(
-            Stream.of(LawnchairShortcut.UNINSTALL, LawnchairShortcut.CUSTOMIZE, LawnchairShortcut.OPEN_IN_STORE),
+            Stream.of(LawnchairShortcut.UNINSTALL, LawnchairShortcut.CUSTOMIZE, app.lawnchair.allapps.GlowMoveToCategory.MOVE, LawnchairShortcut.OPEN_IN_STORE),
             Stream.of(LawnchairShortcut.PAUSE_APPS, GlowAppLock.LOCK, GlowAppLock.SHARE),
         ),
     )
@@ -472,6 +472,7 @@ class LawnchairLauncher : QuickstepLauncher() {
         super.onResume()
         restartIfPending()
         app.lawnchair.update.GlowUpdater.maybeAutoCheck(this)
+        app.lawnchair.views.GlowHints.maybeShow(this)
         refreshPredictionContainersFromModel()
 
         dragLayer.viewTreeObserver.addOnDrawListener(

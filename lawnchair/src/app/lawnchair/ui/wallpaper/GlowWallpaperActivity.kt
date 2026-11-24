@@ -17,7 +17,6 @@
 package app.lawnchair.ui.wallpaper
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.WallpaperManager
 import android.content.Intent
 import android.graphics.Color
@@ -46,25 +45,24 @@ import java.util.concurrent.Executors
  */
 class GlowWallpaperActivity : Activity() {
 
+    /** The theme accent (Themes / Settings), not a fixed violet. */
+    private val ACCENT by lazy { GlowGlass.accent(this) }
+
+
     private val executor = Executors.newSingleThreadExecutor()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.WHITE
-        window.navigationBarColor = Color.WHITE
-        // Dark status and navigation bar icons on the white page
-        window.decorView.systemUiVisibility =
-            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.WHITE)
             fitsSystemWindows = true
         }
+        GlowWallpaperTarget.stylePage(this, root)
 
         root.addView(TextView(this).apply {
             setText(R.string.wallpapers)
-            setTextColor(Color.BLACK)
+            setTextColor(GlowWallpaperTarget.TEXT)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(20), dp(20), dp(20), dp(12))
@@ -119,25 +117,17 @@ class GlowWallpaperActivity : Activity() {
         }
     }
 
+    private var busy: app.lawnchair.views.GlowSheet? = null
+
     private fun askWhereToApply(@DrawableRes res: Int) {
-        val labels = arrayOf(
-            getString(R.string.glow_wallpaper_home),
-            getString(R.string.glow_wallpaper_lock),
-            getString(R.string.glow_wallpaper_both),
-        )
-        val flags = intArrayOf(
-            WallpaperManager.FLAG_SYSTEM,
-            WallpaperManager.FLAG_LOCK,
-            WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
-        )
-        AlertDialog.Builder(this)
-            .setTitle(R.string.glow_wallpaper_apply)
-            .setItems(labels) { _, which -> applyWallpaper(res, flags[which]) }
-            .show()
+        if (busy != null) return
+        GlowWallpaperTarget.ask(this) { flags -> applyWallpaper(res, flags) }
     }
 
     private fun applyWallpaper(@DrawableRes res: Int, which: Int) {
+        if (busy != null) return
         val appContext = applicationContext
+        busy = GlowWallpaperTarget.showBusy(this)
         executor.execute {
             val ok = runCatching {
                 resources.openRawResource(res).use { stream ->
@@ -145,6 +135,8 @@ class GlowWallpaperActivity : Activity() {
                 }
             }.isSuccess
             runOnUiThread {
+                busy?.takeIf { !isDestroyed }?.dismiss()
+                busy = null
                 Toast.makeText(
                     appContext,
                     if (ok) R.string.glow_wallpaper_applied else R.string.glow_wallpaper_failed,
@@ -172,7 +164,6 @@ class GlowWallpaperActivity : Activity() {
     ).toInt()
 
     companion object {
-        private val ACCENT = GlowGlass.ACCENT
 
         private val WALLPAPERS = listOf(
             R.drawable.glow_wallpaper_violet,

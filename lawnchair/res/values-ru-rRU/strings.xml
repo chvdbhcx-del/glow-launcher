@@ -30,7 +30,7 @@
     <string name="action_unlock">Разблокировать</string>
     <string name="action_lock">Заблокировать</string>
     <string name="action_apply">Применить</string>
-    <string name="action_customize">Настроить</string>
+    <string name="action_customize">Изменить значок и имя</string>
     <string name="always_choice">Всегда</string>
     <string name="never_choice">Никогда</string>
     <string name="clipboard">Буфер обмена</string>
@@ -130,10 +130,10 @@
     <string name="wallpapers">Обои</string>
     <string name="caddy_beta">Группировка (бета)</string>
     <string name="caddy">Группировка</string>
-    <string name="app_drawer_folder">Папки в Меню приложений</string>
+    <string name="app_drawer_folder">Папки в библиотеке приложений</string>
     <string name="selected_apps">Выбранные приложения</string>
     <string name="add_apps">Добавить приложения</string>
-    <string name="app_drawer_folder_settings">Папки в Меню приложений</string>
+    <string name="app_drawer_folder_settings">Папки в библиотеке приложений</string>
     <string name="add_folder">Создать папку</string>
     <string name="edit_folder">Изменить папку</string>
     <string name="add_label">Добавить</string>
@@ -175,22 +175,22 @@
     <string name="home_screen_actions">Действия на главном экране</string>
     <string name="dock_label">Док-панель</string>
     <string name="dock_description">Строка поиска, число иконок</string>
-    <string name="app_drawer_label">Меню приложений</string>
-    <string name="app_drawer_description">Скрытые приложения, число столбцов, иконки</string>
-    <string name="drawer_search_label">Поиск в Меню приложений</string>
+    <string name="app_drawer_label">Библиотека приложений</string>
+    <string name="app_drawer_description">Скрытые приложения, значки</string>
+    <string name="drawer_search_label">Поиск в библиотеке приложений</string>
     <string name="drawer_search_description">Веб-подсказки, глобальный поиск</string>
     <string name="folders_label">Папки</string>
     <string name="folders_description">Кол-во строк и столбцов</string>
     <string name="gestures_label">Жесты</string>
     <string name="gestures_description">Касания и Свайп-жесты</string>
-    <string name="quickstep_label">Экран недавних приложений</string>
-    <string name="quickstep_description">Кнопка \"Очистить всё\", радиус углов</string>
+    <string name="quickstep_label">Недавние приложения</string>
+    <string name="quickstep_description">Кнопка «Очистить всё», радиус углов</string>
     <string name="backup_and_restore_label">Резервные копии и восстановление</string>
     <string name="backup_and_restore_description">Сохранить текущую конфигурацию, восстановить резервные копии</string>
     <string name="about_label">О программе</string>
     <string name="app_info_drop_target_label">О приложении</string>
     <string name="debug_restart_launcher">Перезапустить Glow</string>
-    <string name="experimental_features_label">Эксперимент. функции</string>
+    <string name="experimental_features_label">Экспериментальные функции</string>
     <!-- Experimental features -->
     <string name="workspace_label">Рабочее пространство</string>
     <string name="smartspace_label">Smartspace</string>
@@ -198,15 +198,15 @@
     <string name="internal_description">Внутренние могут быть более нестабильными, чем другие экспериментальные группы</string>
     <string name="font_picker_label">Настройки шрифта</string>
     <string name="font_picker_description">Некоторый текст останется без изменений</string>
-    <string name="smartspace_calendar_label">Настройки календаря виджета \"Самое главное\"</string>
+    <string name="smartspace_calendar_label">Настройки календаря виджета «Самое главное»</string>
     <string name="smartspace_calendar_description">Разрешить отображение даты в календарях не-грегорианского типа</string>
     <string name="workspace_increase_max_grid_size_label">Увеличить макс. размер сетки</string>
     <string name="workspace_increase_max_grid_size_description">Увеличить макс. допустимый размер сетки глав. экрана с 10 &#xd7; 10 на 20 &#xd7; 20</string>
     <string name="always_reload_icons_label">Всегда перезагружать иконки</string>
     <string name="always_reload_icons_description">Обновлять иконки после того, как акцентные цвета обновятся</string>
     <string name="always_reload_icons_warning">Это приведет к регулярному обновлению значков и может повлиять на производительность. Отключите, если набор значков не обновляется регулярно.</string>
-    <string name="show_deck_layout">Стиль колоды</string>
-    <string name="show_deck_layout_description">Показывать опцию для скрытия Меню приложений и автоматического добавления новых приложений на главный экран</string>
+    <string name="show_deck_layout">Режим без библиотеки</string>
+    <string name="show_deck_layout_description">Показывать опцию для скрытия библиотеки приложений и автоматического добавления новых приложений на главный экран</string>
     <string name="material_expressive_label">Стиль Material 3 Expressive</string>
     <string name="material_expressive_description">Включить стиль Material 3 Expressive в рабочем пространстве</string>
     <string name="folder_shape_label">Форма папки</string>
@@ -221,7 +221,7 @@
     <string name="vibration_feedback_default_choice">По умолчанию</string>
     <string name="vibration_feedback_expressive_choice">Выразительно</string>
     <string name="recents_lock_unlock">Блокировка приложений</string>
-    <string name="recents_lock_unlock_description">Запретить закрытие выбранного приложения при нажатии кнопки \"Очистить всё\"</string>
+    <string name="recents_lock_unlock_description">Запретить закрытие выбранного приложения при нажатии кнопки «Очистить всё»</string>
     <!--Overlay-->
     <string name="app_closing_animation">Анимация закрытия приложений</string>
     <string name="overlay_fade_in">Затухание</string>
@@ -244,7 +244,7 @@
     <string name="dismissed_prediction_apps_label_with_count">Заблокированные приложения (%1$d)</string>
     <string name="prediction_system_settings">Использовать системные предложения</string>
     <string name="missing_usage_access_label">Требуются разрешение на чтение использования устройства</string>
-    <string name="missing_usage_access_desc">To improve app suggestions, turn on usage access for <xliff:g id="name" example="Glow">%1$s</xliff:g></string>
+    <string name="missing_usage_access_desc">Чтобы улучшить подсказки приложений, разрешите <xliff:g id="name" example="Glow">%1$s</xliff:g> доступ к истории использования</string>
     <!--
 
     Notifications
@@ -338,28 +338,28 @@
     <!-- Icon pack settings -->
     <string name="icon_pack">Набор иконок</string>
     <string name="get_more_icon_packs">Получить больше иконок</string>
-    <string name="fallback_icon_source_title">Fallback icon source</string>
+    <string name="fallback_icon_source_title">Запасной источник значков</string>
     <string name="system_icons">Системные иконки</string>
     <string name="force_monochrome_label">Включить монохром</string>
     <string name="force_monochrome_description">Использовать текущий цветовой акцент для перекраски неподдерживаемых приложений.</string>
-    <string name="enforce_themed_icons_title">Enforce themed icons</string>
-    <string name="enforce_themed_icons_description">Even to unsupported apps (not recommended)</string>
+    <string name="enforce_themed_icons_title">Тематические значки для всех</string>
+    <string name="enforce_themed_icons_description">Даже для приложений без поддержки (не рекомендуется)</string>
     <string name="themed_icon_title">Тематические иконки</string>
-    <string name="themed_icons_description">Adapt supported app icons to match your device\'s theme and color scheme. These icons are applied on top of your existing icon packs.</string>
+    <string name="themed_icons_description">Значки поддерживаемых приложений подстраиваются под тему и цвета устройства. Они применяются поверх выбранного набора значков.</string>
     <string name="themed_icons_off_label">Выкл</string>
     <string name="themed_icons_home_label">Главный экран</string>
-    <string name="themed_icons_home_and_drawer_label">Главный экран и Меню приложений</string>
-    <string name="themed_icons_no_fallback">No fallback</string>
+    <string name="themed_icons_home_and_drawer_label">Главный экран и библиотека</string>
+    <string name="themed_icons_no_fallback">Без запасного варианта</string>
     <string name="lawnicons_not_installed_description">Нет поддерживаемых наборов значков</string>
     <string name="advanced_icon_settings_title">Расширенные настройки иконок</string>
-    <string name="reshape_unthemed_icons_title">Reshape unthemed icons</string>
-    <string name="reshape_unthemed_icons_description">By adding a background</string>
+    <string name="reshape_unthemed_icons_title">Менять форму значков без темы</string>
+    <string name="reshape_unthemed_icons_description">С помощью фона</string>
     <!-- Fonts -->
     <string name="pref_fonts_add_fonts">Добавить шрифты</string>
     <string name="pref_fonts_add_fonts_summary">Поддерживаются OTF и TTF шрифты</string>
     <string name="pref_fonts_missing_font">Шрифт не найден</string>
-    <string name="font_label">Шрифт (эксперимент.)</string>
-    <string name="fontWorkspace">Общие</string>
+    <string name="font_label">Шрифты</string>
+    <string name="fontWorkspace">Основной шрифт</string>
     <string name="fontHeading">Заголовки</string>
     <string name="fontHeadingMedium">Заголовки (сред. размер)</string>
     <string name="fontBody">Обычный текст</string>
@@ -427,8 +427,8 @@
     <string name="smartspace_battery_full">Заряжено</string>
     <string name="smartspace_battery_low">Низкий заряд батареи</string>
     <string name="battery_charging_percentage_charging_time">"%1$d%% — Осталось: %2$s"</string>
-    <string name="smartspace_widget">Виджет \"Самое главное\"</string>
-    <string name="smartspace_widget_description">Показывать в виджете:</string>
+    <string name="smartspace_widget">Сводка</string>
+    <string name="smartspace_widget_description">Что показывать</string>
     <!-- Data and time format settings -->
     <string name="smartspace_calendar">Календарь</string>
     <string name="smartspace_date_and_time">Дата и время</string>
@@ -453,7 +453,7 @@
     <string name="onboarding_major_upgrade_title">Встречайте новый Glow</string>
     <string name="onboarding_major_upgrade_subtitle">Что нового?</string>
     <string name="onboarding_welcome">Добро пожаловать в Glow!</string>
-    <string name="onboarding_swipe_up">Смахните вверх, чтобы открыть Меню приложений</string>
+    <string name="onboarding_swipe_up">Смахните влево с последней страницы, чтобы открыть библиотеку</string>
     <!-- Smartspacer strings -->
     <string name="maximum_number_of_targets">Макс. кол-во целей</string>
     <string name="open_smartspacer_settings">Открыть настройки Smartspacer</string>
@@ -463,9 +463,9 @@
     <string name="event_provider_missing_notification_dots">Чтобы использовать <xliff:g example="My Provider" id="providerName">%1$s</xliff:g>, включите Точки уведомлений</string>
     <!-- Toggle button for enabling Smartspace -->
     <string name="smartspace_widget_toggle_label">Показывать на глав. экране</string>
-    <string name="smartspace_widget_toggle_description">Данные виджета \"Самое главное\" можно добавить на глав. экран вручную с помощью виджета \"Glow\"</string>
+    <string name="smartspace_widget_toggle_description">Данные виджета «Самое главное» можно добавить на глав. экран вручную с помощью виджета «Glow»</string>
     <!-- List of available providers -->
-    <string name="smartspace_mode_label">Провайдер виджета \"Самое главное\"</string>
+    <string name="smartspace_mode_label">Провайдер виджета «Самое главное»</string>
     <string name="smartspace_mode_google">Google</string>
     <string name="smartspace_mode_google_search">Поиск Google</string>
     <!-- Miscellaneous Smartspace strings -->
@@ -534,12 +534,12 @@
 
     -->
     <string name="gesture_double_tap">Двойное нажатие</string>
-    <string name="gesture_swipe_up">Смахнуть Вверх</string>
+    <string name="gesture_swipe_up">Смахнуть вверх</string>
     <string name="gesture_swipe_down">Смахнуть Вниз</string>
     <string name="gesture_two_finger_swipe_down">Смахнуть Вниз двумя пальцами</string>
     <string name="gesture_two_finger_swipe_up">Смахнуть Вверх двумя пальцами</string>
-    <string name="gesture_home_tap">Кнопка \"Домой\"</string>
-    <string name="gesture_back_tap">Кнопка \"Назад\"</string>
+    <string name="gesture_home_tap">Кнопка «Домой»</string>
+    <string name="gesture_back_tap">Кнопка «Назад»</string>
     <string name="gesture_swipe_left">Смахнуть Влево</string>
     <string name="gesture_swipe_right">Смахнуть Вправо</string>
     <string name="gesture_handler_no_op">Ничего не делать</string>
@@ -549,24 +549,24 @@
     <string name="gesture_handler_open_quick_settings">Открыть быстрые настройки</string>
     <string name="gesture_handler_open_app_option">Открыть приложение</string>
     <string name="gesture_handler_open_app_config">Открыть %1$s</string>
-    <string name="gesture_handler_open_app_drawer">Открыть Меню приложений</string>
+    <string name="gesture_handler_open_app_drawer">Открыть библиотеку приложений</string>
     <string name="gesture_handler_open_app_search">Открыть поиск по приложениям</string>
     <string name="gesture_handler_open_search">Открыть поиск</string>
     <string name="gesture_handler_open_assistant">Открыть приложение-ассистент</string>
     <string name="pick_app_for_gesture">Выбрать приложение</string>
     <string name="dt2s_admin_hint_title">Необходимы права администратора</string>
-    <string name="dt2s_admin_hint">Что бы выключить экран устройства, установите Glow как администратор устройства. Нажмите \"Открыть настройки\", затем нажмите \"Установить этого администратора устройства\"</string>
+    <string name="dt2s_admin_hint">Чтобы выключить экран устройства, установите Glow как администратор устройства. Нажмите «Открыть настройки», затем нажмите \"Установить этого администратора устройства\"</string>
     <string name="dt2s_admin_warning">Жесты для выключения экрана устройства будут выключены.</string>
     <string name="d2ts_recents_a11y_hint_title">Включить службу спец. возможностей</string>
     <string name="sleep_a11y_hint">Выключить экран устройства</string>
     <string name="notifications_fallback_a11y_hint">Открыть панель уведомлений</string>
     <string name="quick_settings_a11y_hint">Открыть панель быстрых настроек</string>
     <string name="recents_screen_a11y_hint">открыть Экран недавних приложений</string>
-    <string name="generic_a11y_hint">Чтобы использовать функционал \" %1$s \", включите Glow в меню спец. возможностей. Для этого откройте Настройки, затем выберите \"Glow\" и нажмите \"Использовать Glow\".</string>
+    <string name="generic_a11y_hint">Чтобы использовать функционал « %1$s », включите Glow в меню спец. возможностей. Для этого откройте Настройки, затем выберите «Glow» и нажмите «Использовать Glow».</string>
     <string name="generic_a11y_disclaimer">Glow использует метод спец. возможностей «performGlobalAction» для выполнения этого действия. Это чувствительное разрешение, позволяющее отслеживать другие приложения. Однако, Glow не настроен на такой мониторинг и не регистрирует никакие события.</string>
     <string name="sleep_mode_label">Режим сна</string>
     <string name="sleep_mode_auto">Авто</string>
-    <string name="sleep_mode_root">Режим \"Root\"</string>
+    <string name="sleep_mode_root">Режим «Root»</string>
     <string name="sleep_mode_accessibility">Режим службы спец. возможностей</string>
     <string name="sleep_mode_device_admin">Режим администратора устройства</string>
     <!--
@@ -592,7 +592,7 @@
     <string name="home_screen_rotation_label">Поворот главного экрана</string>
     <string name="home_screen_rotation_description">Разрешить поворот главного экрана при повороте устройства</string>
     <string name="auto_updater_label">Автоматически проверять обновления</string>
-    <string name="auto_updater_description">Проверять обновление \"ночных\" сборок приложения при открытии экрана \"О программе\"</string>
+    <string name="auto_updater_description">Проверять обновление «ночных» сборок приложения при открытии экрана «О программе»</string>
     <string name="live_information_label">Информация в реальном времени</string>
     <string name="live_information_description">Отображает сообщение и задает флаги функции по умолчанию</string>
     <string name="wallpaper_blur">Размытие обоев (эксперимент.)</string>
@@ -600,7 +600,7 @@
     <string name="wallpaper_background_blur_factor">Предел фактора размытия</string>
     <string name="home_lawn_deck_label">Колода приложений</string>
     <string name="home_lawn_deck_label_beta">Колода приложений (бета)</string>
-    <string name="home_lawn_deck_description">Мгновенный доступ к приложениям с помощью Колоды приложений --> отсутствует Меню приложений, разработана для простоты и удобной организации работы</string>
+    <string name="home_lawn_deck_description">Мгновенный доступ к приложениям с помощью Колоды приложений --> нет библиотеки приложений, разработана для простоты и удобной организации работы</string>
     <string name="auto_add_shortcuts_label">Добавлять новые приложения на глав. экран</string>
     <string name="minus_one_enable">Показывать ленту новостей</string>
     <string name="minus_one_unavailable">Приложения для ленты новостей не установлены</string>
@@ -669,7 +669,7 @@
     <string name="hotseat_bg_vertical_inset_top">Верхний отступ</string>
     <string name="hotseat_bg_vertical_inset_bottom">Нижний отступ</string>
     <string name="hotseat_bg_color_label">Цвет фона</string>
-    <string name="hotseat_bg_corner_radius">Background corner radius</string>
+    <string name="hotseat_bg_corner_radius">Скругление углов</string>
     <string name="hotseat_bg_alpha">Прозрачность фона</string>
     <!-- Pause apps shortcut -->
     <string name="pause">Приостановить</string>
@@ -689,13 +689,12 @@
     <string name="when_folded_label">Когда сложено</string>
     <string name="when_unfolded_label">Когда разложено</string>
     <string name="unfolded_grid_description">Glow объединяет две страницы вместе для заполнения дисплея большего размера</string>
-    <string name="foldable_columns_error">Параметр \"Сложено\" должен быть меньше или равен параметру \"Разложено\". При необходимости параметры будут автоматически скорректированы.</string>
+    <string name="foldable_columns_error">Параметр «Сложено» должен быть меньше или равен параметру «Разложено». При необходимости параметры будут автоматически скорректированы.</string>
     <string name="hotseat_bottom_space_label">Нижний отступ</string>
     <string name="page_indicator_height">Высота индикатора страниц</string>
     <!-- Search providers -->
     <string name="search_provider_app_search">Поиск по приложениям</string>
     <string name="search_provider_custom">Польз. настройки</string>
-    <string name="search_provider_sponsored_description">%1$s и Lawnchair имеют соглашение о разделе доходов.\n\nПоиск с помощью %1$s помогает поддерживать Lawnchair.</string>
     <string name="app_label">Приложение</string>
     <string name="website_label">Веб-сайт</string>
     <string name="qsb_search_provider_app_required">Требуется приложение</string>
@@ -710,7 +709,7 @@
     <string name="pref_all_apps_remember_position_title">Запомнить позицию</string>
     <string name="pref_all_apps_remember_position_description">Сохранять последнюю позицию после скроллинга при закрытии меню приложений</string>
     <string name="pref_all_apps_show_scrollbar_title">Показать полосу прокрутки</string>
-    <string name="app_drawer_columns">Кол-во столбцов в Меню приложений</string>
+    <string name="app_drawer_columns">Столбцов в библиотеке</string>
     <string name="row_height_label">Высота строки</string>
     <string name="app_drawer_haptic_feedback_label">Виброотклик</string>
     <string name="app_drawer_indent_label">Горизонт. отступ</string>
@@ -719,7 +718,7 @@
     <string name="pref_all_apps_search_bar_background">Показывать фон позади панели поиска</string>
     <string name="work_profile_tab_container_background_label">Показывать фон позади вкладок</string>
     <!-- HiddenAppsPreferences -->
-    <string name="hide_from_drawer">Скрыть из Меню приложений</string>
+    <string name="hide_from_drawer">Скрыть из библиотеки</string>
     <string name="hidden_apps_label_with_count">Скрытые приложения (%1$d)</string>
     <plurals name="apps_count">
         <item quantity="one">%1$d приложение</item>
@@ -746,7 +745,7 @@
     <string name="task_menu_force_stop">Закрыть принудительно </string>
     <string name="window_corner_radius_label">Радиус скругления краёв экрана</string>
     <string name="override_window_corner_radius_label">Польз. радиус углов экрана</string>
-    <string name="window_corner_radius_description">При жесте \"Смахнуть Вверх\" для открытия Экрана недавних приложений, текущее приложение следует за пальцем, сворачиваясь в карточку. Используйте этот ползунок для настройки радиуса угла карточки, когда она почти развернута, чтобы соответствовать углам экрана.</string>
+    <string name="window_corner_radius_description">При жесте «Смахнуть Вверх» для открытия Экрана недавних приложений, текущее приложение следует за пальцем, сворачиваясь в карточку. Используйте этот ползунок для настройки радиуса угла карточки, когда она почти развернута, чтобы соответствовать углам экрана.</string>
     <string name="taskbar_label">Панель задач</string>
     <string name="enable_taskbar_experimental">Показать панель задач (экспериментально)</string>
     <!--
@@ -774,7 +773,7 @@
     <string name="pref_search_auto_show_keyboard">Автоматически показывать клавиатуру</string>
     <string name="fuzzy_search_title">Поиск по совпадению</string>
     <string name="fuzzy_search_desc">Поиск приложений по схожему запросу</string>
-    <string name="show_suggested_apps_at_drawer_top">Показывать рекомендации в верх. части Меню приложений</string>
+    <string name="show_suggested_apps_at_drawer_top">Показывать рекомендации вверху библиотеки</string>
     <string name="perform_wide_search_title">Поиск по устройству</string>
     <string name="perform_wide_search_description">Поиск контактов, файлов и настроек вашего телефона</string>
     <string name="show_hidden_apps_in_search_results">Показывать скрытые приложения в результатах поиска</string>

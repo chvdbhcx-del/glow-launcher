@@ -683,7 +683,6 @@
     <!-- Search providers -->
     <string name="search_provider_app_search">Alkalmazáskereső</string>
     <string name="search_provider_custom">Egyéni</string>
-    <string name="search_provider_sponsored_description">%1$s és a Lawnchair bevételmegosztási megállapodást kötött.\n\nHa %1$s végzi a keresést, azzal segít a Lawnchair-nek is.</string>
     <string name="app_label">Alkalmazás</string>
     <string name="website_label">Weboldal</string>
     <string name="qsb_search_provider_app_required">Ehhez kell egy alkalmazás</string>
