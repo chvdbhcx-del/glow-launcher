@@ -225,9 +225,16 @@ fun resolveFolderBackgroundColor(context: Context): Int {
     return if (custom != 0) {
         custom
     } else {
-        ColorTokens.FolderBackgroundColor.resolveColor(context)
+        // Glow: dark violet frosted glass on every wallpaper (labels on it are white)
+        GLOW_FOLDER_GLASS
     }
 }
+
+/** Glow's default folder panel colour, used with the folder opacity setting. */
+const val GLOW_FOLDER_GLASS = 0xFF2A1E3C.toInt()
+
+/** True when the folder uses Glow's dark glass, so its labels must be white. */
+fun usesGlowFolderGlass(context: Context): Boolean = getCustomFolderColor(context) == 0
 
 /** Apply Lawnchair custom allapps colour to the provided colour */
 private fun getAllAppsBaseColor(context: Context, defaultColor: Int): Int {

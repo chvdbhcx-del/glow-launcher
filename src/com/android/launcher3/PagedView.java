@@ -1364,6 +1364,13 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
                 // scrolled position (which is discrete).
                 mLastMotion = direction;
 
+                // Glow: past the last page the App Library follows the finger
+                if (mGlowDownOnLastPage && getNextPage() == getPageCount() - 1) {
+                    float travel = direction - mDownMotionPrimary;
+                    float toward = mIsRtl ? travel : -travel;
+                    onGlowPullPastLastPage(Math.max(0f, toward) / Math.max(1f, size));
+                }
+
                 if (delta != 0) {
                     mOrientationHandler.setPrimary(this, VIEW_SCROLL_BY, delta);
 
@@ -1509,11 +1516,17 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
                     onDisallowSwipeToMinusOnePage();
                 }
                 // Glow: a firm pull past the last page (iOS App Library gesture)
+                if (onGlowPullReleased(glowVelocityTowardNext(), false)) {
+                    // the library followed the finger and now settles open or closed
+                } else {
                 float endPull = layoutDir == LAYOUT_DIRECTION_LTR
                         ? mEdgeGlowRight.getDistance() : mEdgeGlowLeft.getDistance();
                 if (endPull > 0.06f && mGlowDownOnLastPage) {
                     onPulledPastLastPage();
                 }
+                }
+            } else if (onGlowPullReleased(glowVelocityTowardNext(), false)) {
+                // the library followed the finger and now settles open or closed
             } else if (mGlowDownOnLastPage && getNextPage() == getPageCount() - 1) {
                 // Glow: before Android 12 EdgeEffect reports no pull distance, so measure
                 // how far the finger travelled past the last page instead
@@ -1535,6 +1548,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
             if (mIsBeingDragged) {
                 runOnPageScrollsInitialized(this::snapToDestination);
             }
+            onGlowPullReleased(0f, true);
             mEdgeGlowLeft.onRelease(ev);
             mEdgeGlowRight.onRelease(ev);
             resetTouchState();
@@ -1576,6 +1590,25 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
 
     /** Glow: called when the user pulls past the last page and lets go. */
     protected void onPulledPastLastPage() { }
+
+    /** Glow: the finger is [fraction] of the page width past the last page (0 when not). */
+    protected void onGlowPullPastLastPage(float fraction) { }
+
+    /**
+     * Glow: the finger left after following the App Library. Returns true when a pull was in
+     * progress (the subclass settles it), false when there was none.
+     */
+    protected boolean onGlowPullReleased(float velocityTowardNext, boolean cancelled) {
+        return false;
+    }
+
+    /** Pixels per second toward the page after the last one (positive = toward the library). */
+    private float glowVelocityTowardNext() {
+        if (mVelocityTracker == null || mActivePointerId == INVALID_POINTER) return 0f;
+        mVelocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
+        float v = mOrientationHandler.getPrimaryVelocity(mVelocityTracker, mActivePointerId);
+        return mIsRtl ? v : -v;
+    }
 
     protected void resetTouchState() {
         releaseVelocityTracker();

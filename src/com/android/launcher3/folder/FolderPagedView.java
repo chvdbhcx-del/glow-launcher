@@ -359,6 +359,11 @@ public class FolderPagedView extends PagedView<PageIndicatorDots> implements Cli
             }
         }
 
+        // Glow: white labels on the dark glass folder panel
+        if (icon instanceof BubbleTextView btv && !mFolder.isInAppDrawer()
+                && app.lawnchair.util.LawnchairUtilsKt.usesGlowFolderGlass(getContext())) {
+            btv.setTextColor(android.graphics.Color.WHITE);
+        }
         icon.setOnClickListener(mFolder.mActivityContext.getItemOnClickListener());
         icon.setOnLongClickListener(mFolder);
         icon.setOnFocusChangeListener(mFocusIndicatorHelper);

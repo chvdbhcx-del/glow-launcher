@@ -1802,7 +1802,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         float bottomSheetBackgroundAlpha = Color.alpha(bottomSheetBackgroundColor) / 255.0f;
         if (hasBottomSheet) {
             mHeaderPaint.setColor(bottomSheetBackgroundColor);
-            mHeaderPaint.setAlpha((int) (bottomSheetBackgroundAlpha * 255));
+            // Glow: the panel fades with the container (Spotlight-style search)
+            mHeaderPaint.setAlpha((int) (bottomSheetBackgroundAlpha * 255 * getAlpha()));
 
             mTmpRectF.set(
                     leftWithScale,

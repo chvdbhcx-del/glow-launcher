@@ -360,6 +360,10 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         mFolderName.setTextSize(TypedValue.COMPLEX_UNIT_PX, dp.folderLabelTextSizePx * 1.15f);
         // Glow: bold folder title, like iOS
         mFolderName.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        if (LawnchairUtilsKt.usesGlowFolderGlass(getContext())) {
+            mFolderName.setTextColor(android.graphics.Color.WHITE);
+            mFolderName.setHintTextColor(android.graphics.Color.argb(150, 255, 255, 255));
+        }
         mFolderName.setOnBackKeyListener(this);
         mFolderName.setOnEditorActionListener(this);
         mFolderName.setSelectAllOnFocus(true);

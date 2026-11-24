@@ -131,6 +131,10 @@ object GlowPageIndicator {
         // The field says what the user tapped ("Search"), not "App Library"
         search.editText?.setHint(R.string.label_search)
         search.editText?.showKeyboard()
+        // Spotlight-style: fade in over the home screen, no sideways slide
+        if (app.lawnchair.allapps.GlowSideLibrary.isEnabled(launcher)) {
+            app.lawnchair.allapps.GlowSideLibrary.spotlight = true
+        }
         launcher.stateManager.goToState(LauncherState.ALL_APPS)
     }
 

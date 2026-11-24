@@ -414,6 +414,51 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         }
     }
 
+    // Glow: dragging past the last page pulls the App Library in under the finger
+    @Nullable private com.android.launcher3.anim.AnimatorPlaybackController mGlowPull;
+    private static final float GLOW_PULL_COMMIT = 0.3f;
+    private static final long GLOW_PULL_DURATION = 360;
+
+    @Override
+    protected void onGlowPullPastLastPage(float fraction) {
+        if (mGlowPull == null) {
+            if (fraction < 0.03f || !mLauncher.isInState(LauncherState.NORMAL)
+                    || mLauncher.isWorkspaceLocked()
+                    || !app.lawnchair.allapps.GlowSideLibrary.isEnabled(mLauncher)) {
+                return;
+            }
+            mGlowPull = mLauncher.getStateManager()
+                    .createAnimationToNewWorkspace(LauncherState.ALL_APPS, GLOW_PULL_DURATION);
+            mGlowPull.dispatchOnStart();
+        }
+        mGlowPull.setPlayFraction(Utilities.boundToRange(fraction, 0f, 1f));
+    }
+
+    @Override
+    protected boolean onGlowPullReleased(float velocityTowardNext, boolean cancelled) {
+        com.android.launcher3.anim.AnimatorPlaybackController pull = mGlowPull;
+        if (pull == null) return false;
+        mGlowPull = null;
+        float progress = pull.getProgressFraction();
+        float minFling = 800 * getResources().getDisplayMetrics().density;
+        boolean open = !cancelled && (velocityTowardNext > minFling
+                || (progress > GLOW_PULL_COMMIT && velocityTowardNext > -minFling));
+        LauncherState target = open ? LauncherState.ALL_APPS : LauncherState.NORMAL;
+        if (!open) pull.dispatchOnCancel();
+        android.animation.ValueAnimator player = pull.getAnimationPlayer();
+        player.setFloatValues(progress, open ? 1f : 0f);
+        player.setDuration((long) (GLOW_PULL_DURATION
+                * Math.max(0.35f, open ? 1f - progress : progress)));
+        player.setInterpolator(app.lawnchair.views.GlowGlass.Motion.ENTER);
+        pull.setEndAction(() -> {
+            if (!mLauncher.isInState(target)) {
+                mLauncher.getStateManager().goToState(target, false);
+            }
+        });
+        player.start();
+        return true;
+    }
+
     // Glow: TalkBack and Switch Access users can't do the edge swipe, so the App Library
     // is also an accessibility action of the home screen
     @Override
