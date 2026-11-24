@@ -26,9 +26,13 @@ for node in re.findall(r"<node [^>]*>", xml):
         break
 PY
 )
-  if [ -n "$xy" ]; then adb shell input tap $xy; return 0; fi
+  if [ -n "$xy" ]; then
+    if [ -n "$LONG" ]; then adb shell input swipe $xy $xy 1200; else adb shell input tap $xy; fi
+    return 0
+  fi
   echo "not found: $1"; return 1
 }
+long_text() { LONG=1 tap_text "$1"; }
 
 adb install -r glow.apk
 adb shell cmd package set-home-activity "$PKG/app.lawnchair.LawnchairLauncher"
@@ -61,6 +65,16 @@ for i in 1 2 3 4; do
   if has_text "A–Z"; then break; fi
 done
 shot 02-app-library 2
+# App menu in the library, then the "Move to folder" sheet
+for app in Chrome Camera Photos Clock Settings Files; do
+  if long_text "$app"; then
+    shot 02b-app-menu 2
+    tap_text "Move to folder" && shot 02c-move-to-folder 2
+    adb shell input keyevent KEYCODE_BACK
+    sleep 1
+    break
+  fi
+done
 tap_text "A–Z" && shot 03-a-z-list 3
 adb shell input keyevent KEYCODE_BACK
 sleep 1
