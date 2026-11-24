@@ -1105,6 +1105,11 @@
     <string name="glow_welcome_restore">Restore from a backup</string>
     <string name="glow_welcome_tips">Three gestures worth knowing</string>
     <string name="glow_welcome_start">Start</string>
+    <string name="glow_settings_look">Look</string>
+    <string name="glow_settings_themes_description">Wallpaper and accent colour in one tap</string>
+    <string name="glow_settings_wallpapers_description">Glow wallpapers or your own picture</string>
+    <string name="glow_settings_library">App Library and search</string>
+    <string name="glow_settings_more">Backup and info</string>
     <string name="glow_open_library">Open App Library</string>
     <string name="glow_dock_glass_frost">Glass frost</string>
     <string name="glow_about_release_notes">What\'s new</string>

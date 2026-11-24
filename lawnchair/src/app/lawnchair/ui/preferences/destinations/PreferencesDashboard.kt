@@ -120,7 +120,27 @@ fun PreferencesDashboard(
         }
 
         val deckLayout = prefs2.deckLayout.getAdapter()
-        PreferenceGroup {
+
+        // Glow: five plain groups instead of one long list of eleven entries
+        PreferenceGroup(heading = stringResource(R.string.glow_settings_look)) {
+            PreferenceCategory(
+                label = stringResource(R.string.glow_themes),
+                description = stringResource(R.string.glow_settings_themes_description),
+                iconResource = R.drawable.ic_glow_themes,
+                onNavigate = {
+                    context.startActivity(Intent(context, app.lawnchair.ui.wallpaper.GlowThemesActivity::class.java))
+                },
+            )
+
+            PreferenceCategory(
+                label = stringResource(R.string.wallpapers),
+                description = stringResource(R.string.glow_settings_wallpapers_description),
+                iconResource = R.drawable.ic_glow_wallpaper,
+                onNavigate = {
+                    context.startActivity(Intent(context, app.lawnchair.ui.wallpaper.GlowWallpaperActivity::class.java))
+                },
+            )
+
             PreferenceCategory(
                 label = stringResource(R.string.general_label),
                 description = stringResource(R.string.general_description),
@@ -128,22 +148,15 @@ fun PreferencesDashboard(
                 onNavigate = { onNavigate(General) },
                 isSelected = currentRoute is General,
             )
+        }
 
+        PreferenceGroup(heading = stringResource(R.string.home_screen_label)) {
             PreferenceCategory(
                 label = stringResource(R.string.home_screen_label),
                 description = stringResource(R.string.home_screen_description),
                 iconResource = R.drawable.ic_home_screen,
                 onNavigate = { onNavigate(HomeScreen) },
                 isSelected = currentRoute is HomeScreen,
-            )
-
-            PreferenceCategory(
-                label = stringResource(id = R.string.smartspace_widget),
-                description = stringResource(R.string.smartspace_widget_description),
-                // Off by default in Glow; a crossed-out eye read like an error
-                iconResource = R.drawable.ic_smartspace,
-                onNavigate = { onNavigate(Smartspace) },
-                isSelected = currentRoute is Smartspace,
             )
 
             PreferenceCategory(
@@ -154,6 +167,25 @@ fun PreferencesDashboard(
                 isSelected = currentRoute is Dock,
             )
 
+            PreferenceCategory(
+                label = stringResource(R.string.folders_label),
+                description = stringResource(R.string.folders_description),
+                iconResource = R.drawable.ic_folder,
+                onNavigate = { onNavigate(Folders) },
+                isSelected = currentRoute is Folders,
+            )
+
+            PreferenceCategory(
+                label = stringResource(id = R.string.smartspace_widget),
+                description = stringResource(R.string.smartspace_widget_description),
+                // Off by default in Glow; a crossed-out eye read like an error
+                iconResource = R.drawable.ic_smartspace,
+                onNavigate = { onNavigate(Smartspace) },
+                isSelected = currentRoute is Smartspace,
+            )
+        }
+
+        PreferenceGroup(heading = stringResource(R.string.glow_settings_library)) {
             ExpandAndShrink(
                 visible = !deckLayout.state.value,
             ) {
@@ -173,15 +205,9 @@ fun PreferencesDashboard(
                 onNavigate = { onNavigate(Search()) },
                 isSelected = currentRoute is Search,
             )
+        }
 
-            PreferenceCategory(
-                label = stringResource(R.string.folders_label),
-                description = stringResource(R.string.folders_description),
-                iconResource = R.drawable.ic_folder,
-                onNavigate = { onNavigate(Folders) },
-                isSelected = currentRoute is Folders,
-            )
-
+        PreferenceGroup(heading = stringResource(id = R.string.gestures_label)) {
             PreferenceCategory(
                 label = stringResource(id = R.string.gestures_label),
                 description = stringResource(R.string.gestures_description),
@@ -201,7 +227,9 @@ fun PreferencesDashboard(
                     isSelected = currentRoute is Quickstep,
                 )
             }
+        }
 
+        PreferenceGroup(heading = stringResource(R.string.glow_settings_more)) {
             PreferenceCategory(
                 label = stringResource(R.string.backup_and_restore_label),
                 description = stringResource(R.string.backup_and_restore_description),

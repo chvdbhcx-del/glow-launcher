@@ -28,6 +28,11 @@
     <string name="glow_welcome_restore">Восстановить из резервной копии</string>
     <string name="glow_welcome_tips">Три жеста, которые стоит знать</string>
     <string name="glow_welcome_start">Начать</string>
+    <string name="glow_settings_look">Оформление</string>
+    <string name="glow_settings_themes_description">Обои и цвет акцента в одно касание</string>
+    <string name="glow_settings_wallpapers_description">Обои Glow или своя картинка</string>
+    <string name="glow_settings_library">Библиотека и поиск</string>
+    <string name="glow_settings_more">Копии и сведения</string>
     <string name="glow_open_library">Открыть библиотеку приложений</string>
     <string name="glow_dock_glass_frost">Матовость стекла</string>
     <string name="glow_about_release_notes">Что нового</string>
