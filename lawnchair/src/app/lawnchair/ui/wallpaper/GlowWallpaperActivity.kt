@@ -17,7 +17,6 @@
 package app.lawnchair.ui.wallpaper
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.WallpaperManager
 import android.content.Intent
 import android.graphics.Color
@@ -118,7 +117,7 @@ class GlowWallpaperActivity : Activity() {
         }
     }
 
-    private var busy: AlertDialog? = null
+    private var busy: app.lawnchair.views.GlowSheet? = null
 
     private fun askWhereToApply(@DrawableRes res: Int) {
         if (busy != null) return

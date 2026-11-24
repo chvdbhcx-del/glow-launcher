@@ -209,6 +209,9 @@ public class WidgetsFullSheet extends BaseWidgetSheet
         super.onFinishInflate();
         mContent = findViewById(R.id.container);
         mContent.setBackground(DrawableTokens.BgWidgetsFullSheet.resolve(getContext()));
+        // Glow: frosted glass over the wallpaper instead of a flat opaque sheet
+        app.lawnchair.views.GlowFrostedBackground.apply(mContent,
+                getResources().getDimension(R.dimen.dialogCornerRadius));
 
         View collapseHandle = findViewById(R.id.collapse_handle);
         collapseHandle.setBackgroundColor(ColorTokens.TextColorSecondary.resolveColor(getContext()));

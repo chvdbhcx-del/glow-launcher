@@ -1098,6 +1098,13 @@
     <string name="glow_themes">Themes</string>
     <string name="glow_hint_library">Swipe left past the last page for the App Library</string>
     <string name="glow_hint_edit">Touch and hold the home screen to edit it</string>
+    <string name="glow_hint_search">Tap Search on the home screen to find any app</string>
+    <string name="glow_welcome_title">Welcome to Glow</string>
+    <string name="glow_welcome_look">Pick a look. You can change it any time in Themes.</string>
+    <string name="glow_welcome_keep">Keep my wallpaper</string>
+    <string name="glow_welcome_restore">Restore from a backup</string>
+    <string name="glow_welcome_tips">Three gestures worth knowing</string>
+    <string name="glow_welcome_start">Start</string>
     <string name="glow_open_library">Open App Library</string>
     <string name="glow_dock_glass_frost">Glass frost</string>
     <string name="glow_about_release_notes">What\'s new</string>

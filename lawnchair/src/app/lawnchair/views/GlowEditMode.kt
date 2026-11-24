@@ -20,7 +20,6 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.TimeAnimator
 import android.animation.ValueAnimator
-import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
@@ -453,10 +452,8 @@ object GlowEditMode {
             is LauncherAppWidgetInfo -> R.string.glow_remove_widget_message
             else -> R.string.glow_remove_app_message
         }
-        val builder = AlertDialog.Builder(launcher, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(launcher.getString(R.string.glow_remove_title, title))
-            .setMessage(message)
-            .setNegativeButton(R.string.glow_cancel, null)
+        val sheet = GlowSheet(launcher)
+            .title(launcher.getString(R.string.glow_remove_title, title), launcher.getString(message))
 
         val pkg = (info as? WorkspaceItemInfo)
             ?.takeIf { it.itemType == com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPLICATION }
@@ -467,13 +464,14 @@ object GlowEditMode {
             val flags = apps.getApplicationInfo(pkg, 0, info.user).flags
             (flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0
         }.getOrDefault(false)
-        if (pkg != null) {
-            builder.setPositiveButton(R.string.glow_remove_from_home) { _, _ ->
-                removeWithUndo(launcher, view, info)
-            }
+        val label = if (pkg != null) R.string.glow_remove_from_home else R.string.glow_remove
+        sheet.choice(launcher.getString(label), primary = true) {
+            sheet.dismiss()
+            removeWithUndo(launcher, view, info)
         }
         if (pkg != null && removable) {
-            builder.setNeutralButton(R.string.glow_delete_app) { _, _ ->
+            sheet.choice(launcher.getString(R.string.glow_delete_app)) {
+                sheet.dismiss()
                 runCatching {
                     launcher.startActivity(
                         Intent(Intent.ACTION_DELETE, Uri.fromParts("package", pkg, null))
@@ -482,11 +480,8 @@ object GlowEditMode {
                     )
                 }
             }
-        } else if (pkg == null) {
-            builder.setPositiveButton(R.string.glow_remove) { _, _ ->
-                removeWithUndo(launcher, view, info)
-            }
         }
-        builder.show()
+        sheet.choice(launcher.getString(R.string.glow_cancel)) { sheet.dismiss() }
+        sheet.show()
     }
 }

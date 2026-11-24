@@ -17,15 +17,11 @@
 package app.lawnchair.ui.wallpaper
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.WallpaperManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import android.view.Gravity
 import android.view.View
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
+import app.lawnchair.views.GlowSheet
 import com.android.launcher3.R
 
 /** Shared bits of the Wallpapers and Themes screens: where to apply, and a busy dialog. */
@@ -33,21 +29,21 @@ internal object GlowWallpaperTarget {
 
     /** Asks Home screen / Lock screen / Both, then calls [onPick] with the WallpaperManager flags. */
     fun ask(activity: Activity, onPick: (Int) -> Unit) {
-        val labels = arrayOf(
-            activity.getString(R.string.glow_wallpaper_home),
-            activity.getString(R.string.glow_wallpaper_lock),
-            activity.getString(R.string.glow_wallpaper_both),
-        )
-        val flags = intArrayOf(
-            WallpaperManager.FLAG_SYSTEM,
-            WallpaperManager.FLAG_LOCK,
-            WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK,
-        )
-        AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(R.string.glow_wallpaper_apply)
-            .setItems(labels) { _, which -> onPick(flags[which]) }
-            .show()
+        val sheet = GlowSheet(activity).title(activity.getString(R.string.glow_wallpaper_apply))
+        listOf(
+            R.string.glow_wallpaper_home to WallpaperManager.FLAG_SYSTEM,
+            R.string.glow_wallpaper_lock to WallpaperManager.FLAG_LOCK,
+            R.string.glow_wallpaper_both to (WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
+        ).forEach { (label, flags) ->
+            sheet.choice(activity.getString(label), primary = flags == BOTH) {
+                sheet.dismiss()
+                onPick(flags)
+            }
+        }
+        sheet.show()
     }
+
+    private const val BOTH = WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
 
     /** Page text on the dark Glow background. */
     const val TEXT = 0xFFF6F0FF.toInt()
@@ -68,25 +64,7 @@ internal object GlowWallpaperTarget {
         )
     }
 
-    /** A small non-cancelable "Applying…" dialog shown while the wallpaper is written. */
-    fun showBusy(activity: Activity): AlertDialog {
-        val density = activity.resources.displayMetrics.density
-        val pad = (24 * density).toInt()
-        val content = LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(pad, pad, pad, pad)
-            addView(ProgressBar(activity))
-            addView(TextView(activity).apply {
-                setText(R.string.glow_wallpaper_applying)
-                setTextColor(TEXT)
-                textSize = 16f
-                setPadding(pad, 0, 0, 0)
-            })
-        }
-        return AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setView(content)
-            .setCancelable(false)
-            .show()
-    }
+    /** A small non-cancelable "Applying…" sheet shown while the wallpaper is written. */
+    fun showBusy(activity: Activity): GlowSheet =
+        GlowSheet(activity).progress(activity.getString(R.string.glow_wallpaper_applying)).show(cancelable = false)
 }

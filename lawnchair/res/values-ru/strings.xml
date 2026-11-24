@@ -21,6 +21,13 @@
     <string name="glow_themes">Темы</string>
     <string name="glow_hint_library">Смахните влево с последней страницы, чтобы открыть библиотеку приложений</string>
     <string name="glow_hint_edit">Удерживайте палец на экране, чтобы изменить его</string>
+    <string name="glow_hint_search">Нажмите «Поиск» на рабочем столе, чтобы найти любое приложение</string>
+    <string name="glow_welcome_title">Добро пожаловать в Glow</string>
+    <string name="glow_welcome_look">Выберите оформление. Его всегда можно сменить в «Темах».</string>
+    <string name="glow_welcome_keep">Оставить мои обои</string>
+    <string name="glow_welcome_restore">Восстановить из резервной копии</string>
+    <string name="glow_welcome_tips">Три жеста, которые стоит знать</string>
+    <string name="glow_welcome_start">Начать</string>
     <string name="glow_open_library">Открыть библиотеку приложений</string>
     <string name="glow_dock_glass_frost">Матовость стекла</string>
     <string name="glow_about_release_notes">Что нового</string>

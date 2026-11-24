@@ -16,8 +16,8 @@
 
 package app.lawnchair.update
 
-import android.app.AlertDialog
 import android.content.Context
+import android.content.res.ColorStateList
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
@@ -29,6 +29,7 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
+import app.lawnchair.views.GlowSheet
 import com.android.launcher3.BuildConfig
 import com.android.launcher3.Launcher
 import com.android.launcher3.R
@@ -80,7 +81,9 @@ object GlowUpdater {
     private fun isIdle(launcher: Launcher): Boolean =
         launcher.isInState(com.android.launcher3.LauncherState.NORMAL) &&
             com.android.launcher3.AbstractFloatingView.getTopOpenView(launcher) == null &&
-            !launcher.dragController.isDragging
+            !launcher.dragController.isDragging &&
+            !GlowSheet.isAnyShowing() &&
+            app.lawnchair.views.GlowHints.isWelcomeDone(launcher)
 
     private val ownTag: String get() = BuildConfig.GLOW_RELEASE_TAG
 
@@ -272,24 +275,29 @@ object GlowUpdater {
 
     private fun offer(launcher: Launcher, release: GlowUpdateLogic.Release, manual: Boolean) {
         val name = release.tag.removePrefix("v")
-        val builder = AlertDialog.Builder(launcher, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(launcher.getString(R.string.glow_update_available, name))
-            .setMessage(R.string.glow_update_message)
-            .setPositiveButton(R.string.glow_update_install) { _, _ -> download(launcher, release) }
-            .setNegativeButton(R.string.glow_update_later) { _, _ ->
-                prefs(launcher).edit().putString(KEY_DISMISSED, release.tag).apply()
-            }
+        val sheet = GlowSheet(launcher)
+            .title(launcher.getString(R.string.glow_update_available, name), launcher.getString(R.string.glow_update_message))
+        sheet.choice(launcher.getString(R.string.glow_update_install), primary = true) {
+            sheet.dismiss()
+            download(launcher, release)
+        }
+        sheet.choice(launcher.getString(R.string.glow_update_later)) {
+            sheet.dismiss()
+            prefs(launcher).edit().putString(KEY_DISMISSED, release.tag).apply()
+        }
         if (!manual) {
-            builder.setNeutralButton(R.string.glow_update_never_auto) { _, _ ->
+            sheet.choice(launcher.getString(R.string.glow_update_never_auto)) {
+                sheet.dismiss()
                 prefs(launcher).edit().putBoolean(KEY_AUTO, false).apply()
                 Toast.makeText(launcher, R.string.glow_update_auto_off, Toast.LENGTH_LONG).show()
             }
         } else if (!prefs(launcher).getBoolean(KEY_AUTO, true)) {
-            builder.setNeutralButton(R.string.glow_update_auto_on) { _, _ ->
+            sheet.choice(launcher.getString(R.string.glow_update_auto_on)) {
+                sheet.dismiss()
                 prefs(launcher).edit().putBoolean(KEY_AUTO, true).apply()
             }
         }
-        builder.show()
+        sheet.show()
     }
 
     private fun download(launcher: Launcher, release: GlowUpdateLogic.Release) {
@@ -304,19 +312,20 @@ object GlowUpdater {
             }
             return
         }
+        val dialog = GlowSheet(launcher).title(launcher.getString(R.string.glow_update_downloading))
         val progress = ProgressBar(launcher, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
             isIndeterminate = true
-            val pad = (24 * resources.displayMetrics.density).toInt()
-            setPadding(pad, pad / 2, pad, pad / 2)
+            progressTintList = ColorStateList.valueOf(dialog.accentColor)
+            indeterminateTintList = ColorStateList.valueOf(dialog.accentColor)
         }
         cancelled = false
-        val dialog = AlertDialog.Builder(launcher, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(R.string.glow_update_downloading)
-            .setView(progress)
-            .setCancelable(false)
-            .setNegativeButton(R.string.glow_cancel) { _, _ -> cancelled = true }
-            .show()
+        dialog.view(progress)
+            .choice(launcher.getString(R.string.glow_cancel)) {
+                cancelled = true
+                dialog.dismiss()
+            }
+            .show(cancelable = false)
         val appContext = launcher.applicationContext
         THREAD_POOL_EXECUTOR.execute {
             val file = runCatching {

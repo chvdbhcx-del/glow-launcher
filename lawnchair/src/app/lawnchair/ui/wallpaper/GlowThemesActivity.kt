@@ -17,8 +17,6 @@
 package app.lawnchair.ui.wallpaper
 
 import android.app.Activity
-import android.app.AlertDialog
-import android.app.WallpaperManager
 import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.Typeface
@@ -34,15 +32,11 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import app.lawnchair.preferences2.PreferenceManager2
-import app.lawnchair.theme.color.ColorOption
 import app.lawnchair.ui.preferences.PreferenceActivity
 import app.lawnchair.ui.preferences.navigation.General
 import app.lawnchair.views.GlowGlass
 import com.android.launcher3.R
-import com.patrykmichalik.opto.core.setBlocking
 import java.util.concurrent.Executors
 
 /**
@@ -55,11 +49,6 @@ class GlowThemesActivity : Activity() {
     private val ACCENT by lazy { GlowGlass.accent(this) }
 
 
-    private data class GlowTheme(
-        @StringRes val name: Int,
-        @DrawableRes val wallpaper: Int,
-        val accent: Int,
-    )
 
     private val executor = Executors.newSingleThreadExecutor()
 
@@ -70,7 +59,7 @@ class GlowThemesActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), 0, dp(20), dp(20))
         }
-        THEMES.forEach { list.addView(createCard(it)) }
+        GlowThemes.ALL.forEach { list.addView(createCard(it)) }
 
         list.addView(outlinedButton(R.string.glow_all_wallpapers) {
             startActivity(android.content.Intent(this, GlowWallpaperActivity::class.java))
@@ -116,7 +105,7 @@ class GlowThemesActivity : Activity() {
         setOnClickListener { onClick() }
     }
 
-    private fun createCard(theme: GlowTheme): View {
+    private fun createCard(theme: GlowThemes.Theme): View {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(8), 0, dp(16))
@@ -187,35 +176,19 @@ class GlowThemesActivity : Activity() {
         return card
     }
 
-    private var busy: AlertDialog? = null
+    private var busy: app.lawnchair.views.GlowSheet? = null
 
-    private fun applyTheme(theme: GlowTheme) {
+    private fun applyTheme(theme: GlowThemes.Theme) {
         if (busy != null) return
         GlowWallpaperTarget.ask(this) { flags -> applyTheme(theme, flags) }
     }
 
-    private fun applyTheme(theme: GlowTheme, which: Int) {
+    private fun applyTheme(theme: GlowThemes.Theme, which: Int) {
         if (busy != null) return
         val appContext = applicationContext
         busy = GlowWallpaperTarget.showBusy(this)
         executor.execute {
-            val ok = runCatching {
-                resources.openRawResource(theme.wallpaper).use { stream ->
-                    WallpaperManager.getInstance(appContext).setStream(
-                        stream,
-                        null,
-                        true,
-                        which,
-                    )
-                }
-            }.isSuccess
-            if (ok) {
-                // Written here on the background thread: setBlocking waits for the disk
-                runCatching {
-                    PreferenceManager2.getInstance(appContext).accentColor
-                        .setBlocking(ColorOption.CustomColor(theme.accent))
-                }
-            }
+            val ok = GlowThemes.applyBlocking(appContext, theme, which)
             runOnUiThread {
                 busy?.takeIf { !isDestroyed }?.dismiss()
                 busy = null
@@ -239,14 +212,4 @@ class GlowThemesActivity : Activity() {
         value.toFloat(),
         resources.displayMetrics,
     ).toInt()
-
-    companion object {
-
-        private val THEMES = listOf(
-            GlowTheme(R.string.glow_theme_violet, R.drawable.glow_wallpaper_violet, Color.rgb(0xB1, 0x4F, 0xE8)),
-            GlowTheme(R.string.glow_theme_rose, R.drawable.glow_wallpaper_rose, Color.rgb(0xE0, 0x4F, 0x76)),
-            GlowTheme(R.string.glow_theme_frost, R.drawable.glow_wallpaper_frost, Color.rgb(0x6F, 0x8F, 0xD8)),
-            GlowTheme(R.string.glow_theme_peach, R.drawable.glow_wallpaper_peach, Color.rgb(0xF0, 0x8A, 0x5D)),
-        )
-    }
 }
