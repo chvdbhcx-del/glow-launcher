@@ -420,6 +420,11 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private static final long GLOW_PULL_DURATION = 360;
 
     @Override
+    protected boolean isGlowPullActive() {
+        return mGlowPull != null;
+    }
+
+    @Override
     protected void onGlowPullPastLastPage(float fraction) {
         if (mGlowPull == null) {
             if (fraction < 0.03f || !mLauncher.isInState(LauncherState.NORMAL)
@@ -427,6 +432,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                     || !app.lawnchair.allapps.GlowSideLibrary.isEnabled(mLauncher)) {
                 return;
             }
+            android.util.Log.d("GlowPull", "start at " + fraction);
             mGlowPull = mLauncher.getStateManager()
                     .createAnimationToNewWorkspace(LauncherState.ALL_APPS, GLOW_PULL_DURATION);
             mGlowPull.dispatchOnStart();
@@ -444,6 +450,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         boolean open = !cancelled && (velocityTowardNext > minFling
                 || (progress > GLOW_PULL_COMMIT && velocityTowardNext > -minFling));
         LauncherState target = open ? LauncherState.ALL_APPS : LauncherState.NORMAL;
+        android.util.Log.d("GlowPull", "release progress=" + progress + " velocity="
+                + velocityTowardNext + " cancelled=" + cancelled + " open=" + open);
         if (!open) pull.dispatchOnCancel();
         android.animation.ValueAnimator player = pull.getAnimationPlayer();
         player.setFloatValues(progress, open ? 1f : 0f);

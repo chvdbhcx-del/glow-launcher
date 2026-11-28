@@ -1106,6 +1106,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
                 mDownMotionX = x;
                 mDownMotionY = y;
                 mDownMotionPrimary = mOrientationHandler.getPrimaryDirection(ev, 0);
+                mGlowDownRawX = ev.getRawX();
                 // Glow: the App Library pull only counts when the swipe starts on the last page
                 mGlowDownOnLastPage = getNextPage() == getPageCount() - 1;
                 mLastMotion = (int) mDownMotionPrimary;
@@ -1310,6 +1311,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
             mDownMotionX = ev.getX();
             mDownMotionY = ev.getY();
             mDownMotionPrimary = mOrientationHandler.getPrimaryDirection(ev, 0);
+            mGlowDownRawX = ev.getRawX();
             mLastMotion = (int) mDownMotionPrimary;
             mTotalMotion = 0;
             mAllowEasyFling = false;
@@ -1365,11 +1367,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
                 mLastMotion = direction;
 
                 // Glow: past the last page the App Library follows the finger
-                if (mGlowDownOnLastPage && getNextPage() == getPageCount() - 1) {
-                    float travel = direction - mDownMotionPrimary;
-                    float toward = mIsRtl ? travel : -travel;
-                    onGlowPullPastLastPage(Math.max(0f, toward) / Math.max(1f, size));
-                }
+                glowFollowPull(ev);
 
                 if (delta != 0) {
                     mOrientationHandler.setPrimary(this, VIEW_SCROLL_BY, delta);
@@ -1403,6 +1401,8 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
             break;
 
         case MotionEvent.ACTION_UP:
+            // Glow: the pull ends where the finger left, even if moves were batched away
+            glowFollowPull(ev);
             if (mIsBeingDragged) {
                 final int activePointerId = mActivePointerId;
                 final int pointerIndex = ev.findPointerIndex(activePointerId);
@@ -1587,6 +1587,27 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
     }
 
     private boolean mGlowDownOnLastPage;
+    private float mGlowDownRawX;
+
+    /**
+     * Glow: past the last page the App Library follows the finger. Measured on screen: once
+     * the pull starts the home screen shrinks (workspace scale), so view coordinates no longer
+     * match the finger. A pull already under way keeps following even if the page state
+     * changes during the state transition.
+     */
+    private void glowFollowPull(MotionEvent ev) {
+        if (!mGlowDownOnLastPage) return;
+        if (!isGlowPullActive() && getNextPage() != getPageCount() - 1) return;
+        float travel = ev.getRawX() - mGlowDownRawX;
+        float toward = mIsRtl ? travel : -travel;
+        onGlowPullPastLastPage(Math.max(0f, toward)
+                / Math.max(1f, getResources().getDisplayMetrics().widthPixels));
+    }
+
+    /** Glow: true while the App Library is following the finger. */
+    protected boolean isGlowPullActive() {
+        return false;
+    }
 
     /** Glow: called when the user pulls past the last page and lets go. */
     protected void onPulledPastLastPage() { }
