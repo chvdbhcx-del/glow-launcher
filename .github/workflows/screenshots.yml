@@ -9,6 +9,10 @@ on:
       tag:
         description: 'Release tag of the APK, e.g. v1.0.0-test24'
         required: true
+      script:
+        description: 'Script in .github/scripts to run on the emulator'
+        required: false
+        default: 'screens.sh'
 
 permissions:
   contents: read
@@ -40,12 +44,14 @@ jobs:
           profile: pixel_6
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash .github/scripts/screens.sh
+          script: bash .github/scripts/${{ github.event.inputs.script || 'screens.sh' }}
       - name: Publish screenshots
         if: always()
         run: |
           ls -la screens || exit 0
-          gh release delete "screens-$APK_TAG" --yes --cleanup-tag || true
-          gh release create "screens-$APK_TAG" screens/*.png --prerelease \
+          NAME="screens-$APK_TAG"
+          [ "${{ github.event.inputs.script || 'screens.sh' }}" = "screens.sh" ] || NAME="probe-$APK_TAG"
+          gh release delete "$NAME" --yes --cleanup-tag || true
+          gh release create "$NAME" screens/* --prerelease \
             --target "$GITHUB_SHA" --title "Screenshots of $APK_TAG" \
             --notes "Emulator screenshots (Pixel 6, Android 14) of $APK_TAG."
