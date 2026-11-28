@@ -1548,7 +1548,6 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
             if (mIsBeingDragged) {
                 runOnPageScrollsInitialized(this::snapToDestination);
             }
-            android.util.Log.d("GlowPull", "cancel", new Throwable());
             onGlowPullReleased(0f, true);
             mEdgeGlowLeft.onRelease(ev);
             mEdgeGlowRight.onRelease(ev);
