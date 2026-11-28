@@ -165,8 +165,12 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
             mLongPressState = STATE_COMPLETED;
         }
 
+        // Glow: on phones the App Library is a side page, not a bottom sheet. While a swipe
+        // past the last home page pulls it in, the state is already ALL_APPS: treating that
+        // as a tap outside a sheet swallowed the drag and closed the library on release.
         boolean isInAllAppsBottomSheet = mLauncher.isInState(ALL_APPS)
-                && mLauncher.getDeviceProfile().shouldShowAllAppsOnSheet();
+                && mLauncher.getDeviceProfile().shouldShowAllAppsOnSheet()
+                && !app.lawnchair.allapps.GlowSideLibrary.isEnabled(mLauncher);
 
         final boolean result;
         if (mLongPressState == STATE_COMPLETED) {
