@@ -1106,6 +1106,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
                 mDownMotionX = x;
                 mDownMotionY = y;
                 mDownMotionPrimary = mOrientationHandler.getPrimaryDirection(ev, 0);
+                mGlowDownRawX = ev.getRawX();
                 // Glow: the App Library pull only counts when the swipe starts on the last page
                 mGlowDownOnLastPage = getNextPage() == getPageCount() - 1;
                 mLastMotion = (int) mDownMotionPrimary;
@@ -1310,6 +1311,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
             mDownMotionX = ev.getX();
             mDownMotionY = ev.getY();
             mDownMotionPrimary = mOrientationHandler.getPrimaryDirection(ev, 0);
+            mGlowDownRawX = ev.getRawX();
             mLastMotion = (int) mDownMotionPrimary;
             mTotalMotion = 0;
             mAllowEasyFling = false;
@@ -1366,9 +1368,12 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
 
                 // Glow: past the last page the App Library follows the finger
                 if (mGlowDownOnLastPage && getNextPage() == getPageCount() - 1) {
-                    float travel = direction - mDownMotionPrimary;
+                    // Measured on screen: once the pull starts the home screen shrinks
+                    // (workspace scale), so view coordinates no longer match the finger
+                    float travel = ev.getRawX() - mGlowDownRawX;
                     float toward = mIsRtl ? travel : -travel;
-                    onGlowPullPastLastPage(Math.max(0f, toward) / Math.max(1f, size));
+                    onGlowPullPastLastPage(Math.max(0f, toward)
+                            / Math.max(1f, getResources().getDisplayMetrics().widthPixels));
                 }
 
                 if (delta != 0) {
@@ -1548,6 +1553,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
             if (mIsBeingDragged) {
                 runOnPageScrollsInitialized(this::snapToDestination);
             }
+            android.util.Log.d("GlowPull", "cancel", new Throwable());
             onGlowPullReleased(0f, true);
             mEdgeGlowLeft.onRelease(ev);
             mEdgeGlowRight.onRelease(ev);
@@ -1587,6 +1593,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
     }
 
     private boolean mGlowDownOnLastPage;
+    private float mGlowDownRawX;
 
     /** Glow: called when the user pulls past the last page and lets go. */
     protected void onPulledPastLastPage() { }

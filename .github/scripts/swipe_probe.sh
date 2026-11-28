@@ -44,6 +44,6 @@ for dur in 120 250 500 900; do
 done
 adb shell dumpsys activity "$PKG" > /dev/null 2>&1
 adb logcat -d > "$OUT/logcat-full.txt"
-grep -E "AndroidRuntime|FATAL|Exception|Glow|StateManager|BaseDragLayer" "$OUT/logcat-full.txt" | grep -v "^--" | tail -400 > "$OUT/logcat.txt"
-cat "$RESULT"
+grep -E "AndroidRuntime|FATAL|GlowPull|StateManager" "$OUT/logcat-full.txt" | grep -v "^--" | tail -400 > "$OUT/logcat.txt"
+cat "$RESULT"; grep -A12 GlowPull "$OUT/logcat-full.txt" | head -150
 exit 0
