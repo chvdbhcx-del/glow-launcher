@@ -420,6 +420,11 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private static final long GLOW_PULL_DURATION = 360;
 
     @Override
+    protected boolean isGlowPullActive() {
+        return mGlowPull != null;
+    }
+
+    @Override
     protected void onGlowPullPastLastPage(float fraction) {
         if (mGlowPull == null) {
             if (fraction < 0.03f || !mLauncher.isInState(LauncherState.NORMAL)

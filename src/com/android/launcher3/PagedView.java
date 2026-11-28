@@ -1367,14 +1367,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
                 mLastMotion = direction;
 
                 // Glow: past the last page the App Library follows the finger
-                if (mGlowDownOnLastPage && getNextPage() == getPageCount() - 1) {
-                    // Measured on screen: once the pull starts the home screen shrinks
-                    // (workspace scale), so view coordinates no longer match the finger
-                    float travel = ev.getRawX() - mGlowDownRawX;
-                    float toward = mIsRtl ? travel : -travel;
-                    onGlowPullPastLastPage(Math.max(0f, toward)
-                            / Math.max(1f, getResources().getDisplayMetrics().widthPixels));
-                }
+                glowFollowPull(ev);
 
                 if (delta != 0) {
                     mOrientationHandler.setPrimary(this, VIEW_SCROLL_BY, delta);
@@ -1408,6 +1401,8 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
             break;
 
         case MotionEvent.ACTION_UP:
+            // Glow: the pull ends where the finger left, even if moves were batched away
+            glowFollowPull(ev);
             if (mIsBeingDragged) {
                 final int activePointerId = mActivePointerId;
                 final int pointerIndex = ev.findPointerIndex(activePointerId);
@@ -1594,6 +1589,26 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
 
     private boolean mGlowDownOnLastPage;
     private float mGlowDownRawX;
+
+    /**
+     * Glow: past the last page the App Library follows the finger. Measured on screen: once
+     * the pull starts the home screen shrinks (workspace scale), so view coordinates no longer
+     * match the finger. A pull already under way keeps following even if the page state
+     * changes during the state transition.
+     */
+    private void glowFollowPull(MotionEvent ev) {
+        if (!mGlowDownOnLastPage) return;
+        if (!isGlowPullActive() && getNextPage() != getPageCount() - 1) return;
+        float travel = ev.getRawX() - mGlowDownRawX;
+        float toward = mIsRtl ? travel : -travel;
+        onGlowPullPastLastPage(Math.max(0f, toward)
+                / Math.max(1f, getResources().getDisplayMetrics().widthPixels));
+    }
+
+    /** Glow: true while the App Library is following the finger. */
+    protected boolean isGlowPullActive() {
+        return false;
+    }
 
     /** Glow: called when the user pulls past the last page and lets go. */
     protected void onPulledPastLastPage() { }
